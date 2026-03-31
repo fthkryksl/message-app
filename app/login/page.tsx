@@ -45,7 +45,11 @@ export default function SignIn() {
       saveToken(token);
       router.push("/chat");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Login failed. Please check your credentials.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Login failed. Please check your credentials.",
+      );
     } finally {
       setLoading(false);
     }
@@ -62,7 +66,10 @@ export default function SignIn() {
         </h1>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col w-full space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col w-full space-y-4"
+        >
           {/* Username */}
           <input
             type="text"
@@ -130,4 +137,3 @@ export default function SignIn() {
     </div>
   );
 }
-
