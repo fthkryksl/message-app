@@ -154,7 +154,7 @@ export default function SignIn() {
             {error && (
               <p className="text-red-500 text-sm text-center px-2">
                 <DecryptedText
-                  text={error}
+                  text="Wrong username or password"
                   speed={200}
                   maxIterations={8}
                   animateOn="view"
