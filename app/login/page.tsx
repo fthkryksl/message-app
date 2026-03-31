@@ -105,7 +105,7 @@ export default function SignIn() {
 
           {/* API Error */}
           {error && (
-            <p className="text-red-500 text-sm text-center px-2">{error}</p>
+            <p className="text-red-500 text-sm text-center px-2">Wrong username or password</p>
           )}
 
           <button
