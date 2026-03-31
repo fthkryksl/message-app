@@ -6,6 +6,7 @@ import { Instrument_Serif } from "next/font/google";
 import { ChevronRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { login, saveToken } from "@/lib/api";
+import BlurText from "@/components/BlurText";
 
 const instrumentSerif = Instrument_Serif({ weight: "400", subsets: ["latin"] });
 
@@ -55,16 +56,21 @@ export default function SignIn() {
     }
   };
 
+  const handleAnimationComplete = () => {
+    console.log("Animation completed!");
+  };
+
   return (
     <div className="flex flex-col flex-1 items-center justify-center bg-linear-to-tr min-h-screen from-orange-400 via-blue-100 to-zinc-50">
       <main className="flex flex-col items-center w-full max-w-sm">
-        {/* Title */}
-        <h1
+        <BlurText
+          text="Login"
+          delay={50}
+          animateBy="letters"
+          direction="top"
+          onAnimationComplete={handleAnimationComplete}
           className={`${instrumentSerif.className} text-3xl text-orange-600 text-center mb-8 tracking-[-0.02em]`}
-        >
-          Login
-        </h1>
-
+        />
         {/* Form */}
         <form
           onSubmit={handleSubmit}
