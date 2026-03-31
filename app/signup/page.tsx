@@ -8,7 +8,9 @@ import Link from "next/link";
 import { register, saveToken } from "@/lib/api";
 import BlurText from "@/components/BlurText";
 import CircularText from "@/components/CircularText";
-import Grainient from "@react-bits/Grainient-TS-TW";
+import Grainient from "@/components/Grainient";
+import ShinyText from "@/components/ShinyText";
+import DecryptedText from "@/components/DecryptedText";
 
 const instrumentSerif = Instrument_Serif({ weight: "400", subsets: ["latin"] });
 
@@ -60,7 +62,7 @@ export default function SignUp() {
       const rawUserid = userid.startsWith("@") ? userid.slice(1) : userid;
       const { token } = await register(rawUserid, password, nickname, fullname);
       saveToken(token);
-      router.push("/chat"); // 👈 Zielseite nach Registrierung anpassen
+      router.push("/chat");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -73,33 +75,36 @@ export default function SignUp() {
   };
 
   return (
-    <div style={{ width: "1080px", height: "1080px", position: "relative" }}>
-      <Grainient
-        color1="#ffffff"
-        color2="#ff7e29"
-        color3="#a3acf0"
-        timeSpeed={0.9}
-        colorBalance={0}
-        warpStrength={1}
-        warpFrequency={5}
-        warpSpeed={2}
-        warpAmplitude={50}
-        blendAngle={0}
-        blendSoftness={0.05}
-        rotationAmount={560}
-        noiseScale={2}
-        grainAmount={0.09}
-        grainScale={1.3}
-        grainAnimated
-        contrast={1.5}
-        gamma={1}
-        saturation={1}
-        centerX={0}
-        centerY={0}
-        zoom={0.9}
-      />
-      <div className="relative flex flex-col flex-1 items-center justify-center bg-linear-to-tr min-h-screen from-orange-400 via-blue-100 to-zinc-50 overflow-hidden">
-        <div className="absolute top-[25px] right-[25px] z-10">
+    <div className="min-h-screen bg-white p-2 pb-2 sm:p-4">
+      <div className="relative flex flex-col flex-1 items-center justify-center h-[calc(100vh-1rem)] sm:h-[calc(100vh-2rem)] rounded-[2rem] overflow-hidden border border-zinc-100">
+        <div className="absolute inset-0 z-0">
+          <Grainient
+            color1="#C7A48D"
+            color2="#D46922"
+            color3="#a3acf0"
+            timeSpeed={0.9}
+            colorBalance={0}
+            warpStrength={1}
+            warpFrequency={5}
+            warpSpeed={2}
+            warpAmplitude={50}
+            blendAngle={0}
+            blendSoftness={0.05}
+            rotationAmount={560}
+            noiseScale={2}
+            grainAmount={0.09}
+            grainScale={1.3}
+            grainAnimated
+            contrast={1.5}
+            gamma={1}
+            saturation={1}
+            centerX={0}
+            centerY={0}
+            zoom={0.9}
+          />
+        </div>
+
+        <div className="absolute top-[16px] right-[16px] z-10">
           <CircularText
             text="TALK*WITH*YOUR*FRIENDS*"
             onHover="slowDown"
@@ -108,7 +113,7 @@ export default function SignUp() {
           />
         </div>
 
-        <main className="flex flex-col items-center w-full max-w-sm">
+        <main className="relative z-10 flex flex-col items-center w-full max-w-sm">
           <BlurText
             text="Sign Up"
             delay={20}
@@ -175,6 +180,7 @@ export default function SignUp() {
                       : "bg-white border-transparent text-zinc-900 focus:border-zinc-300"
                   }`}
                 />
+                {/* Show Password (Toggle Button) */}
                 {password.length > 0 && (
                   <button
                     type="button"
@@ -191,7 +197,7 @@ export default function SignUp() {
               </div>
 
               <div className="w-full px-2 py-2">
-                <p className="text-zinc-500 text-xs mb-2">
+                <p className="text-white text-xs mb-2">
                   Please follow these rules:
                 </p>
                 <div className="text-xs flex flex-col space-y-1">
@@ -207,7 +213,7 @@ export default function SignUp() {
                           ? "text-green-600"
                           : password.length > 0
                             ? "text-red-500"
-                            : "text-zinc-500"
+                            : "text-white"
                       }
                     >
                       {ok ? "✓" : password.length > 0 ? "✗" : "•"} {label}
@@ -219,7 +225,14 @@ export default function SignUp() {
 
             {/* API Error */}
             {error && (
-              <p className="text-red-500 text-sm text-center px-2">{error}</p>
+              <p className="text-red-500 text-sm text-center px-2">
+                <DecryptedText
+                  text={error}
+                  speed={200}
+                  maxIterations={3}
+                  animateOn="view"
+                />
+              </p>
             )}
 
             {/* Submit */}
@@ -233,7 +246,19 @@ export default function SignUp() {
               }`}
             >
               <ChevronRight className="opacity-0" />
-              <span>{loading ? "Creating account…" : "Confirm"}</span>
+              <span>
+                {loading ? (
+                  <ShinyText
+                    text="Loading"
+                    disabled={false}
+                    speed={2}
+                    className="text-zinc-500"
+                    shineColor="#ffffff"
+                  />
+                ) : (
+                  "Confirm"
+                )}
+              </span>
               <ChevronRight
                 className={canSubmit && !loading ? "" : "opacity-0"}
               />
