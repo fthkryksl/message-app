@@ -1,16 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Instrument_Serif } from "next/font/google";
-import { ChevronRight, Eye, EyeOff } from "lucide-react";
+import { ChevronRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { login, saveToken } from "@/lib/api";
 
 const instrumentSerif = Instrument_Serif({ weight: "400", subsets: ["latin"] });
 
 export default function SignIn() {
+  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.value;
@@ -23,7 +28,28 @@ export default function SignIn() {
     setUsername(val);
   };
 
-  const allValid = password.length > 0 && username.length > 0;
+  const allValid = password.length > 0 && username.length > 1;
+
+  // Submit Logic
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!allValid || loading) return;
+
+    setError(null);
+    setLoading(true);
+
+    try {
+      // Strip leading "@" for API
+      const rawUserid = username.startsWith("@") ? username.slice(1) : username;
+      const { token } = await login(rawUserid, password);
+      saveToken(token);
+      router.push("/chat");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Login failed. Please check your credentials.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col flex-1 items-center justify-center bg-linear-to-tr min-h-screen from-orange-400 via-blue-100 to-zinc-50">
@@ -36,7 +62,7 @@ export default function SignIn() {
         </h1>
 
         {/* Form */}
-        <form className="flex flex-col w-full space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col w-full space-y-4">
           {/* Username */}
           <input
             type="text"
@@ -70,18 +96,27 @@ export default function SignIn() {
             )}
           </div>
 
+          {/* API Error */}
+          {error && (
+            <p className="text-red-500 text-sm text-center px-2">{error}</p>
+          )}
+
           <button
             type="submit"
-            disabled={!allValid}
-            className={`w-full mt-4 pl-6 pr-3 py-4 rounded-full flex items-center justify-between text-base transition-colors ${
-              allValid
+            disabled={!allValid || loading}
+            className={`w-full mt-4 pl-6 pr-5 py-4 rounded-full flex items-center justify-between text-base transition-colors ${
+              allValid && !loading
                 ? "bg-zinc-900 text-zinc-100 cursor-pointer"
                 : "bg-zinc-200 text-zinc-500 cursor-not-allowed"
             }`}
           >
             <ChevronRight className={`opacity-0`} />
-            <span>Login</span>
-            <ChevronRight className={`${allValid ? "" : "opacity-0"}`} />
+            <span>{loading ? "Logging in..." : "Login"}</span>
+            {loading ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <ChevronRight className={`${allValid ? "" : "opacity-0"}`} />
+            )}
           </button>
 
           <Link
@@ -95,3 +130,4 @@ export default function SignIn() {
     </div>
   );
 }
+

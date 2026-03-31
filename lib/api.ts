@@ -18,7 +18,7 @@ export async function register(
   fullname: string
 ): Promise<AuthResponse> {
   const url = buildUrl({ request: "register", userid, password, nickname, fullname });
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-store" });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -34,7 +34,7 @@ export async function login(
   password: string
 ): Promise<AuthResponse> {
   const url = buildUrl({ request: "login", userid, password });
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-store" });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -47,21 +47,30 @@ export async function login(
 //Logout
 export async function logout(token: string): Promise<void> {
   const url = buildUrl({ request: "logout", token });
-  await fetch(url);
-  clearToken();
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message ?? `Logout failed (${res.status})`);
+    }
+  } finally {
+    clearToken();
+  }
 }
 
 //Deregistrierung
 export async function deregister(token: string): Promise<void> {
   const url = buildUrl({ request: "deregister", token });
-  const res = await fetch(url);
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.message ?? `Deregistration failed (${res.status})`);
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message ?? `Deregistration failed (${res.status})`);
+    }
+  } finally {
+    clearToken();
   }
-
-  clearToken();
 }
 
 //Token helpers
