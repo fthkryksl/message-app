@@ -44,7 +44,7 @@ export default function ChatPage() {
       return;
     }
     const confirmed = window.confirm(
-      "Are you sure you want to permanently delete your account? This cannot be undone."
+      "Are you sure you want to permanently delete your account? This cannot be undone.",
     );
     if (!confirmed) return;
 
@@ -65,10 +65,10 @@ export default function ChatPage() {
       <div className="relative flex flex-col flex-1 items-center justify-center h-[calc(100vh-1rem)] sm:h-[calc(100vh-2rem)] rounded-[2rem] overflow-hidden border border-zinc-100 shadow-sm">
         <div className="absolute inset-0 z-0">
           <Grainient
-            color1="#ffffff"
-            color2="#ff7e29"
-            color3="#a3acf0"
-            timeSpeed={0.9}
+            color1="#737373"
+            color2="#A37452"
+            color3="#A5ACD9"
+            timeSpeed={1}
             colorBalance={0}
             warpStrength={1}
             warpFrequency={5}
@@ -78,15 +78,15 @@ export default function ChatPage() {
             blendSoftness={0.05}
             rotationAmount={560}
             noiseScale={2}
-            grainAmount={0.09}
-            grainScale={1.3}
+            grainAmount={0.1}
+            grainScale={1.5}
             grainAnimated
             contrast={1.5}
             gamma={1}
             saturation={1}
             centerX={0}
             centerY={0}
-            zoom={0.9}
+            zoom={1}
           />
         </div>
 
@@ -105,75 +105,87 @@ export default function ChatPage() {
             delay={50}
             animateBy="letters"
             direction="top"
-            className={`${instrumentSerif.className} text-3xl text-orange-600 text-center mb-8 tracking-[-0.02em]`}
+            className={`${instrumentSerif.className} text-3xl text-white text-center mb-8 tracking-[-0.02em]`}
           />
 
-        <p className="text-zinc-500 text-sm text-center mb-10">
-          Your conversations will appear here.
-        </p>
-
-        {error && (
-          <p className="text-red-500 text-sm text-center px-2 mb-6">
-            <DecryptedText
-              text={error}
-              speed={200}
-              maxIterations={8}
-              animateOn="view"
-            />
+          <p className="text-white text-sm text-center mb-10">
+            Your conversations will appear here.
           </p>
-        )}
 
-        <div className="flex flex-col w-full space-y-3">
-          {/* Logout */}
-          <button
-            onClick={handleLogout}
-            disabled={loadingLogout || loadingDeregister}
-            className={`w-full pl-6 pr-5 py-4 rounded-full flex items-center justify-between text-base transition-colors ${
-              loadingLogout || loadingDeregister
-                ? "bg-zinc-200 text-zinc-500 cursor-not-allowed"
-                : "bg-zinc-900 text-zinc-100 hover:bg-zinc-700 cursor-pointer"
-            }`}
-          >
-            <LogOut size={18} className="opacity-0" />
-            <span>
+          {error && (
+            <p className="text-red-500 text-sm text-center px-2 mb-6">
+              <DecryptedText
+                text={error}
+                speed={200}
+                maxIterations={8}
+                animateOn="view"
+              />
+            </p>
+          )}
+
+          <div className="flex flex-col w-full space-y-3">
+            {/* Logout */}
+            <button
+              onClick={handleLogout}
+              disabled={loadingLogout || loadingDeregister}
+              className={`w-full pl-6 pr-5 py-4 rounded-full flex items-center justify-between text-base transition-colors ${
+                loadingLogout || loadingDeregister
+                  ? "bg-zinc-200 text-zinc-500 cursor-not-allowed"
+                  : "bg-zinc-900 text-zinc-100 hover:bg-zinc-700 cursor-pointer"
+              }`}
+            >
+              <LogOut size={18} className="opacity-0" />
+              <span>
+                {loadingLogout ? (
+                  <ShinyText
+                    text="Logging out…"
+                    disabled={false}
+                    speed={2}
+                    className="text-zinc-500"
+                    shineColor="#ffffff"
+                  />
+                ) : (
+                  "Logout"
+                )}
+              </span>
               {loadingLogout ? (
-                <ShinyText text="Logging out…" disabled={false} speed={2} className="text-zinc-500" shineColor="#ffffff" />
+                <Loader2 size={18} className="animate-spin" />
               ) : (
-                "Logout"
+                <LogOut size={18} />
               )}
-            </span>
-            {loadingLogout ? (
-              <Loader2 size={18} className="animate-spin" />
-            ) : (
-              <LogOut size={18} />
-            )}
-          </button>
+            </button>
 
-          {/* Deregister */}
-          <button
-            onClick={handleDeregister}
-            disabled={loadingLogout || loadingDeregister}
-            className={`w-full pl-6 pr-5 py-4 rounded-full flex items-center justify-between text-base transition-colors ${
-              loadingLogout || loadingDeregister
-                ? "bg-zinc-200 text-zinc-500 cursor-not-allowed"
-                : "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 cursor-pointer"
-            }`}
-          >
-            <UserX size={18} className="opacity-0" />
-            <span>
+            {/* Deregister */}
+            <button
+              onClick={handleDeregister}
+              disabled={loadingLogout || loadingDeregister}
+              className={`w-full pl-6 pr-5 py-4 rounded-full flex items-center justify-between text-base transition-colors ${
+                loadingLogout || loadingDeregister
+                  ? "bg-zinc-200 text-zinc-500 cursor-not-allowed"
+                  : "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 cursor-pointer"
+              }`}
+            >
+              <UserX size={18} className="opacity-0" />
+              <span>
+                {loadingDeregister ? (
+                  <ShinyText
+                    text="Deleting account…"
+                    disabled={false}
+                    speed={2}
+                    className="text-red-400"
+                    shineColor="#ffffff"
+                  />
+                ) : (
+                  "Delete Account"
+                )}
+              </span>
               {loadingDeregister ? (
-                <ShinyText text="Deleting account…" disabled={false} speed={2} className="text-red-400" shineColor="#ffffff" />
+                <Loader2 size={18} className="animate-spin" />
               ) : (
-                "Delete Account"
+                <UserX size={18} />
               )}
-            </span>
-            {loadingDeregister ? (
-              <Loader2 size={18} className="animate-spin" />
-            ) : (
-              <UserX size={18} />
-            )}
-          </button>
-        </div>
+            </button>
+          </div>
         </main>
       </div>
     </div>

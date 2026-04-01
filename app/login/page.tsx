@@ -66,13 +66,13 @@ export default function SignIn() {
 
   return (
     <div className="min-h-screen bg-white p-2 pb-2 sm:p-4">
-      <div className="relative flex flex-col flex-1 items-center justify-center h-[calc(100vh-1rem)] sm:h-[calc(100vh-2rem)] rounded-[2rem] overflow-hidden border border-zinc-100 shadow-sm">
+      <div className="relative flex flex-col flex-1 items-center justify-center h-[calc(100vh-1rem)] sm:h-[calc(100vh-2rem)] rounded-[2rem] overflow-hidden border border-zinc-100">
         <div className="absolute inset-0 z-0">
           <Grainient
             color1="#C7A48D"
             color2="#D46922"
-            color3="#a3acf0"
-            timeSpeed={0.9}
+            color3="#A3ACF0"
+            timeSpeed={1}
             colorBalance={0}
             warpStrength={1}
             warpFrequency={5}
@@ -82,19 +82,19 @@ export default function SignIn() {
             blendSoftness={0.05}
             rotationAmount={560}
             noiseScale={2}
-            grainAmount={0.09}
-            grainScale={1.3}
+            grainAmount={0.1}
+            grainScale={1.5}
             grainAnimated
             contrast={1.5}
             gamma={1}
             saturation={1}
             centerX={0}
             centerY={0}
-            zoom={0.9}
+            zoom={1}
           />
         </div>
 
-        <div className="absolute top-[25px] right-[25px] z-10">
+        <div className="absolute top-[16px] right-[16px] z-10">
           <CircularText
             text="TALK*WITH*YOUR*FRIENDS*"
             onHover="slowDown"
@@ -108,9 +108,9 @@ export default function SignIn() {
             text="Login"
             delay={50}
             animateBy="letters"
-            direction="top"
+            direction="bottom"
             onAnimationComplete={handleAnimationComplete}
-            className={`${instrumentSerif.className} text-3xl text-orange-600 text-center mb-8 tracking-[-0.02em]`}
+            className={`${instrumentSerif.className} text-3xl text-white text-center mb-8 tracking-[-0.02em]`}
           />
           {/* Form */}
           <form
@@ -120,20 +120,32 @@ export default function SignIn() {
             {/* Username */}
             <input
               type="text"
+              name="username"
               value={username}
               onChange={handleUsernameChange}
               placeholder="@username"
-              className={`w-full px-5 py-3 rounded-full text-base focus:outline-none transition-colors border bg-white border-transparent text-zinc-900 placeholder:text-zinc-400 ${username.length > 0 ? "focus:border-zinc-400" : "focus:border-zinc-300"}`}
+              autoComplete="username"
+              className={`w-full px-5 py-3 rounded-full text-base focus:outline-none transition-colors border placeholder:text-zinc-400 ${
+                username.length > 1
+                  ? "bg-green-50/80 backdrop-blur-sm border-green-600 text-green-900"
+                  : "bg-white/60 backdrop-blur-sm border-transparent text-zinc-900 focus:border-zinc-300"
+              }`}
             />
 
             {/* Password */}
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
+                name="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="password"
-                className={`w-full px-5 py-3 rounded-full text-base focus:outline-none transition-colors border bg-white border-transparent text-zinc-900 placeholder:text-zinc-400 ${password.length > 0 ? "focus:border-zinc-400" : "focus:border-zinc-300"}`}
+                autoComplete="current-password"
+                className={`w-full px-5 py-3 rounded-full text-base focus:outline-none transition-colors border placeholder:text-zinc-400 ${
+                  password.length > 0
+                    ? "bg-green-50/80 backdrop-blur-sm border-green-600 text-green-900"
+                    : "bg-white/60 backdrop-blur-sm border-transparent text-zinc-900 focus:border-zinc-300"
+                }`}
               />
               {password.length > 0 && (
                 <button
@@ -156,7 +168,7 @@ export default function SignIn() {
                 <DecryptedText
                   text="Wrong username or password"
                   speed={200}
-                  maxIterations={8}
+                  maxIterations={3}
                   animateOn="view"
                 />
               </p>
@@ -167,7 +179,7 @@ export default function SignIn() {
               disabled={!allValid || loading}
               className={`w-full mt-4 pl-6 pr-5 py-4 rounded-full flex items-center justify-between text-base transition-colors ${
                 allValid && !loading
-                  ? "bg-zinc-900 text-zinc-100 cursor-pointer"
+                  ? "bg-zinc-900 text-zinc-100 hover:bg-green-900 hover:text-green-100 cursor-pointer"
                   : "bg-zinc-200 text-zinc-500 cursor-not-allowed"
               }`}
             >
