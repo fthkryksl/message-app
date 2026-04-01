@@ -1,3 +1,5 @@
+import { clearToken } from "@/lib/auth";
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export type AuthResponse = {
@@ -72,13 +74,3 @@ export async function deregister(token: string): Promise<void> {
     clearToken();
   }
 }
-
-//Token helpers
-export const saveToken = (token: string) =>
-  localStorage.setItem("auth_token", token);
-
-export const getToken = () =>
-  localStorage.getItem("auth_token");
-
-export const clearToken = () =>
-  localStorage.removeItem("auth_token");
