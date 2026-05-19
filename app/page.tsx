@@ -12,7 +12,7 @@ export default function Home() {
     setMounted(true);
     const token = getToken();
     if (token) {
-      router.push("/chat");
+      router.push("/messages");
     } else {
       router.push("/login");
     }

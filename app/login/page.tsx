@@ -49,7 +49,7 @@ export default function SignIn() {
       const rawUserid = username.startsWith("@") ? username.slice(1) : username;
       const { token } = await login(rawUserid, password);
       saveToken(token);
-      router.push("/chat");
+      router.push("/messages");
     } catch (err: unknown) {
       setError(
         err instanceof Error

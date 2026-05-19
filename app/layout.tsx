@@ -21,8 +21,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("h-full", "antialiased", interTight.variable, "font-sans", geist.variable)}>
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" className={cn("h-full w-full", "antialiased", interTight.variable, "font-sans", geist.variable)}>
+      <body className="h-screen w-screen overflow-hidden bg-slate-950">{children}</body>
     </html>
   );
 }
