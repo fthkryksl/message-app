@@ -8,7 +8,7 @@ import BlurText from "@/components/BlurText";
 const instrumentSerif = Instrument_Serif({ weight: "400", subsets: ["latin"] });
 
 const suggestedGroups = [
-  { id: 1, name: "Mobile UX Design", members: 245, avatar: "MUD" },
+  { id: 1, name: "Mobile UX Design", members: 245, avatar: "MUX" },
   { id: 2, name: "Algorithmen und Datenstruktur", members: 128, avatar: "AND" },
   { id: 3, name: "Die bessere Lerngruppe in Eslingen", members: 89, avatar: "DBL" },
   { id: 4, name: "CampusLeben", members: 456, avatar: "CL" },
