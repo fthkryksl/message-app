@@ -20,7 +20,7 @@ export default function SignUp() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // ── Username (@-prefix) ───────────────────────────────
+  //Username (@-prefix)
   const handleUseridChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.value;
     if (val.length > 0 && !val.startsWith("@")) val = "@" + val;
@@ -114,6 +114,7 @@ export default function SignUp() {
                 : "bg-white border-transparent text-zinc-900 focus:border-zinc-300"
             }`}
           />
+        </div>
 
           {/* Password */}
           <div>
@@ -181,14 +182,56 @@ export default function SignUp() {
             <ChevronRight className={canSubmit && !loading ? "" : "opacity-0"} />
           </button>
 
-          <Link
-            href="/login"
-            className="w-full mt-2 flex items-center justify-center text-sm text-zinc-500 hover:text-zinc-900 transition-colors hover:underline"
-          >
-            I already have an account
-          </Link>
-        </form>
-      </main>
+            {/* API Error */}
+            {error && (
+              <p className="text-red-500 text-sm text-center px-2">
+                <DecryptedText
+                  text={error}
+                  speed={200}
+                  maxIterations={3}
+                  animateOn="view"
+                />
+              </p>
+            )}
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={!canSubmit || loading}
+              className={`w-full mt-2 px-6 py-4 rounded-full flex items-center justify-between text-base transition-colors ${
+                canSubmit && !loading
+                  ? "bg-zinc-900 text-zinc-100 hover:bg-green-900 hover:text-green-100 cursor-pointer"
+                  : "bg-zinc-200 text-zinc-500 cursor-not-allowed"
+              }`}
+            >
+              <ChevronRight className="opacity-0" />
+              <span>
+                {loading ? (
+                  <ShinyText
+                    text="Loading"
+                    disabled={false}
+                    speed={2}
+                    className="text-zinc-500"
+                    shineColor="#ffffff"
+                  />
+                ) : (
+                  "Confirm"
+                )}
+              </span>
+              <ChevronRight
+                className={canSubmit && !loading ? "" : "opacity-0"}
+              />
+            </button>
+
+            <Link
+              href="/login"
+              className="w-full mt-2 flex items-center justify-center text-sm text-zinc-500 hover:text-zinc-900 transition-colors hover:underline"
+            >
+              I already have an account
+            </Link>
+          </form>
+        </main>
+      </div>
     </div>
   );
 }

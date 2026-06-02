@@ -1,13 +1,24 @@
-import { redirect } from "next/navigation";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { getToken } from "@/lib/auth";
 
 export default function Home() {
-  const user = null;
-  // TODO: In Zukunft hier überprüfen, ob der Nutzer angemeldet ist.
-  // Wenn nicht angemeldet -> redirect("/login")
-  // Wenn angemeldet -> Zeige Dashboard/Main App
-  if (user) {
-    return <p>Dashboard</p>;
-  } else {
-    redirect("/login");
-  }
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const token = getToken();
+    if (token) {
+      router.push("/messages");
+    } else {
+      router.push("/login");
+    }
+  }, [router]);
+
+  if (!mounted) return null;
+
+  return null;
 }
