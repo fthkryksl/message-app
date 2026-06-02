@@ -6,7 +6,7 @@ import { Instrument_Serif } from "next/font/google";
 import { ChevronRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { login } from "@/lib/api";
-import { saveToken } from "@/lib/auth";
+import { saveToken, saveUserHash } from "@/lib/auth";
 import BlurText from "@/components/BlurText";
 import CircularText from "@/components/CircularText";
 import Grainient from "@/components/Grainient";
@@ -47,8 +47,9 @@ export default function SignIn() {
     try {
       // Strip leading "@" for API
       const rawUserid = username.startsWith("@") ? username.slice(1) : username;
-      const { token } = await login(rawUserid, password);
+      const { token, hash } = await login(rawUserid, password);
       saveToken(token);
+      saveUserHash(hash);
       router.push("/messages");
     } catch (err: unknown) {
       setError(
@@ -155,7 +156,7 @@ export default function SignIn() {
             {error && (
               <p className="text-red-500 text-sm text-center px-2">
                 <DecryptedText
-                  text="Wrong username or password"
+                  text={error}
                   speed={200}
                   maxIterations={8}
                   animateOn="view"
