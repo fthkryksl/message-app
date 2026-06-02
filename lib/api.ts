@@ -1,5 +1,3 @@
-import { clearToken } from "@/lib/auth";
-
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export type AuthResponse = {
@@ -20,7 +18,7 @@ export async function register(
   fullname: string
 ): Promise<AuthResponse> {
   const url = buildUrl({ request: "register", userid, password, nickname, fullname });
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await fetch(url);
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -36,7 +34,7 @@ export async function login(
   password: string
 ): Promise<AuthResponse> {
   const url = buildUrl({ request: "login", userid, password });
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await fetch(url);
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -49,28 +47,29 @@ export async function login(
 //Logout
 export async function logout(token: string): Promise<void> {
   const url = buildUrl({ request: "logout", token });
-  try {
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message ?? `Logout failed (${res.status})`);
-    }
-  } finally {
-    clearToken();
-  }
+  await fetch(url);
+  clearToken();
 }
 
 //Deregistrierung
 export async function deregister(token: string): Promise<void> {
   const url = buildUrl({ request: "deregister", token });
-  try {
-    const res = await fetch(url, { cache: "no-store" });
-    
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message ?? `Deregistration failed (${res.status})`);
-    }
-  } finally {
-    clearToken();
+  const res = await fetch(url);
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message ?? `Deregistration failed (${res.status})`);
   }
+
+  clearToken();
 }
+
+// ── Token helpers ─────────────────────────────────────────
+export const saveToken = (token: string) =>
+  localStorage.setItem("auth_token", token);
+
+export const getToken = () =>
+  localStorage.getItem("auth_token");
+
+export const clearToken = () =>
+  localStorage.removeItem("auth_token");
