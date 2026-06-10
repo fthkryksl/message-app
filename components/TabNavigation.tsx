@@ -15,6 +15,10 @@ export default function TabNavigation() {
   const pathname = usePathname();
   const router = useRouter();
 
+  if (pathname.startsWith("/messages/") && pathname !== "/messages") {
+    return null;
+  }
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-700 md:hidden">
       <div className="flex justify-around items-center h-20">

@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 import { Instrument_Serif } from "next/font/google";
 import { ChevronRight, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import { register, saveToken } from "@/lib/api";
+import { register } from "@/lib/api";
+import { saveToken, saveUserHash } from "@/lib/auth";
+import ShinyText from "@/components/ShinyText";
+import DecryptedText from "@/components/DecryptedText";
 
 const instrumentSerif = Instrument_Serif({ weight: "400", subsets: ["latin"] });
 
@@ -55,9 +58,10 @@ export default function SignUp() {
     try {
       // Strip the leading "@" before sending to API
       const rawUserid = userid.startsWith("@") ? userid.slice(1) : userid;
-      const { token } = await register(rawUserid, password, nickname, fullname);
+      const { token, hash } = await register(rawUserid, password, nickname, fullname);
       saveToken(token);
-      router.push("/chat"); // 👈 Zielseite nach Registrierung anpassen
+      saveUserHash(hash);
+      router.push("/messages");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -114,7 +118,6 @@ export default function SignUp() {
                 : "bg-white border-transparent text-zinc-900 focus:border-zinc-300"
             }`}
           />
-        </div>
 
           {/* Password */}
           <div>
@@ -164,7 +167,14 @@ export default function SignUp() {
 
           {/* API Error */}
           {error && (
-            <p className="text-red-500 text-sm text-center px-2">{error}</p>
+            <p className="text-red-500 text-sm text-center px-2">
+              <DecryptedText
+                text={error}
+                speed={200}
+                maxIterations={3}
+                animateOn="view"
+              />
+            </p>
           )}
 
           {/* Submit */}
@@ -178,60 +188,32 @@ export default function SignUp() {
             }`}
           >
             <ChevronRight className="opacity-0" />
-            <span>{loading ? "Creating account…" : "Confirm"}</span>
-            <ChevronRight className={canSubmit && !loading ? "" : "opacity-0"} />
+            <span>
+              {loading ? (
+                <ShinyText
+                  text="Loading"
+                  disabled={false}
+                  speed={2}
+                  className="text-zinc-500"
+                  shineColor="#ffffff"
+                />
+              ) : (
+                "Confirm"
+              )}
+            </span>
+            <ChevronRight
+              className={canSubmit && !loading ? "" : "opacity-0"}
+            />
           </button>
 
-            {/* API Error */}
-            {error && (
-              <p className="text-red-500 text-sm text-center px-2">
-                <DecryptedText
-                  text={error}
-                  speed={200}
-                  maxIterations={3}
-                  animateOn="view"
-                />
-              </p>
-            )}
-
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={!canSubmit || loading}
-              className={`w-full mt-2 px-6 py-4 rounded-full flex items-center justify-between text-base transition-colors ${
-                canSubmit && !loading
-                  ? "bg-zinc-900 text-zinc-100 hover:bg-green-900 hover:text-green-100 cursor-pointer"
-                  : "bg-zinc-200 text-zinc-500 cursor-not-allowed"
-              }`}
-            >
-              <ChevronRight className="opacity-0" />
-              <span>
-                {loading ? (
-                  <ShinyText
-                    text="Loading"
-                    disabled={false}
-                    speed={2}
-                    className="text-zinc-500"
-                    shineColor="#ffffff"
-                  />
-                ) : (
-                  "Confirm"
-                )}
-              </span>
-              <ChevronRight
-                className={canSubmit && !loading ? "" : "opacity-0"}
-              />
-            </button>
-
-            <Link
-              href="/login"
-              className="w-full mt-2 flex items-center justify-center text-sm text-zinc-500 hover:text-zinc-900 transition-colors hover:underline"
-            >
-              I already have an account
-            </Link>
-          </form>
-        </main>
-      </div>
+          <Link
+            href="/login"
+            className="w-full mt-2 flex items-center justify-center text-sm text-zinc-500 hover:text-zinc-900 transition-colors hover:underline"
+          >
+            I already have an account
+          </Link>
+        </form>
+      </main>
     </div>
   );
 }
