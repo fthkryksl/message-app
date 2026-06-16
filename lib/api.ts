@@ -57,7 +57,7 @@ export async function register(
   fullname: string
 ): Promise<AuthResponse> {
   const url = buildUrl({ request: "register", userid, password, nickname, fullname });
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-store" });
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.status === "error" || !data.token) {
@@ -73,7 +73,7 @@ export async function login(
   password: string
 ): Promise<AuthResponse> {
   const url = buildUrl({ request: "login", userid, password });
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-store" });
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.status === "error" || !data.token) {
@@ -87,7 +87,7 @@ export async function login(
 export async function logout(token: string): Promise<void> {
   const url = buildUrl({ request: "logout", token });
   try {
-    await fetch(url);
+    await fetch(url, { cache: "no-store" });
   } finally {
     clearAuth();
   }
@@ -96,7 +96,7 @@ export async function logout(token: string): Promise<void> {
 // Deregistrierung
 export async function deregister(token: string): Promise<void> {
   const url = buildUrl({ request: "deregister", token });
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-store" });
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.status === "error") {
@@ -119,7 +119,7 @@ export async function getMessages(
   if (fromid !== undefined) params.fromid = String(fromid);
 
   const url = buildUrl(params);
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.message ?? `Failed to fetch messages (${res.status})`);
@@ -145,6 +145,7 @@ export async function postMessage(
     headers: {
       "Content-Type": "application/json",
     },
+    cache: "no-store",
     body: JSON.stringify({
       request: "postmessage",
       token,
@@ -163,7 +164,7 @@ export async function postMessage(
 // Get Chats
 export async function getChats(token: string): Promise<ChatRoom[]> {
   const url = buildUrl({ request: "getchats", token });
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.message ?? `Failed to fetch chats (${res.status})`);
@@ -180,7 +181,7 @@ export async function createChat(
   ispublic: boolean = false
 ): Promise<number> {
   const url = buildUrl({ request: "createchat", token, chatname, ispublic: String(ispublic) });
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-store" });
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.status === "error" || data.chatid === undefined) {
@@ -193,7 +194,7 @@ export async function createChat(
 // Delete Chat
 export async function deleteChat(token: string, chatid: number): Promise<void> {
   const url = buildUrl({ request: "deletechat", token, chatid: String(chatid) });
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-store" });
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.status === "error") {
@@ -204,7 +205,7 @@ export async function deleteChat(token: string, chatid: number): Promise<void> {
 // Join Chat (Join public or accept invitation)
 export async function joinChat(token: string, chatid: number): Promise<void> {
   const url = buildUrl({ request: "joinchat", token, chatid: String(chatid) });
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-store" });
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.status === "error") {
@@ -215,7 +216,7 @@ export async function joinChat(token: string, chatid: number): Promise<void> {
 // Leave Chat (Leave group)
 export async function leaveChat(token: string, chatid: number): Promise<void> {
   const url = buildUrl({ request: "leavechat", token, chatid: String(chatid) });
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-store" });
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.status === "error") {
@@ -228,7 +229,7 @@ export async function leaveChat(token: string, chatid: number): Promise<void> {
 // Get Profiles
 export async function getProfiles(token: string): Promise<UserProfile[]> {
   const url = buildUrl({ request: "getprofiles", token });
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.message ?? `Failed to fetch profiles (${res.status})`);
@@ -241,7 +242,7 @@ export async function getProfiles(token: string): Promise<UserProfile[]> {
 // Get Invites
 export async function getInvites(token: string): Promise<Invite[]> {
   const url = buildUrl({ request: "getinvites", token });
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.message ?? `Failed to fetch invites (${res.status})`);
@@ -258,7 +259,7 @@ export async function inviteUser(
   invitedhash: string
 ): Promise<void> {
   const url = buildUrl({ request: "invite", token, chatid: String(chatid), invitedhash });
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-store" });
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.status === "error") {
