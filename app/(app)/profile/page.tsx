@@ -1,29 +1,50 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Instrument_Serif } from "next/font/google";
-import { LogOut, UserX, Loader2, Bell, Lock, Palette, HelpCircle } from "lucide-react";
-import { logout, deregister } from "@/lib/api";
-import { getToken } from "@/lib/auth";
+import { LogOut, UserX, Loader2, User } from "lucide-react";
+import { logout, deregister, getProfiles, UserProfile } from "@/lib/api";
+import { getToken, getUserHash } from "@/lib/auth";
 import BlurText from "@/components/BlurText";
 import ShinyText from "@/components/ShinyText";
 import DecryptedText from "@/components/DecryptedText";
 
 const instrumentSerif = Instrument_Serif({ weight: "400", subsets: ["latin"] });
 
-const settingsOptions = [
-  { icon: Bell, label: "Benachrichtigungen", description: "Verwaltung von Benachrichtigungen" },
-  { icon: Lock, label: "Datenschutz & Sicherheit", description: "Kontoeinstellungen" },
-  { icon: Palette, label: "Darstellung", description: "Design und Farbschema" },
-  { icon: HelpCircle, label: "Hilfe & Support", description: "FAQ und Support" },
-];
-
-export default function SettingsPage() {
+export default function ProfilePage() {
   const router = useRouter();
   const [loadingLogout, setLoadingLogout] = useState(false);
   const [loadingDeregister, setLoadingDeregister] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const token = getToken();
+      const hash = getUserHash();
+      if (!token || !hash) {
+        router.push("/login");
+        return;
+      }
+      
+      try {
+        const profiles = await getProfiles(token);
+        const myProfile = profiles.find(p => p.hash === hash);
+        if (myProfile) {
+          setProfile(myProfile);
+        }
+      } catch (err) {
+        console.error("Fehler beim Laden des Profils", err);
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+    
+    fetchProfile();
+  }, [router]);
 
   const handleLogout = async () => {
     const token = getToken();
@@ -66,13 +87,24 @@ export default function SettingsPage() {
     }
   };
 
+  const getAvatarColor = (name: string) => {
+    const colors = ["from-orange-500 to-red-500", "from-blue-500 to-cyan-500", "from-emerald-500 to-teal-500", "from-purple-500 to-pink-500"];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  };
+
+  const displayName = profile?.nickname || "Laden...";
+
   return (
-    <div className="w-full h-full bg-slate-950 text-white">
+    <div className="w-full h-full bg-slate-950 text-white flex flex-col">
       {/* Header */}
-      <div className="sticky top-0 bg-slate-900 border-b border-slate-700 p-4 z-10">
+      <div className="sticky top-0 bg-slate-900 border-b border-slate-700 p-4 z-10 shrink-0">
         <h1 className={`${instrumentSerif.className} text-2xl font-bold`}>
           <BlurText
-            text="Einstellungen"
+            text="Profil"
             delay={50}
             animateBy="letters"
             direction="top"
@@ -82,30 +114,30 @@ export default function SettingsPage() {
       </div>
 
       {/* Content */}
-      <div className="overflow-y-auto">
-        {/* Settings Options */}
-        <div className="divide-y divide-slate-700 border-b border-slate-700">
-          {settingsOptions.map((option) => {
-            const Icon = option.icon;
-            return (
-              <button
-                key={option.label}
-                className="w-full p-4 hover:bg-slate-800 transition-colors active:bg-slate-700 text-left"
-              >
-                <div className="flex items-start gap-3">
-                  <Icon size={20} className="text-orange-500 mt-0.5 shrink-0" />
-                  <div>
-                    <h3 className="font-semibold text-sm">{option.label}</h3>
-                    <p className="text-xs text-slate-400">{option.description}</p>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+      <div className="flex-1 overflow-y-auto">
+        <div className="flex flex-col items-center justify-center p-8 border-b border-slate-700">
+          {!loadingProfile && profile ? (
+            <>
+              <div className={`w-28 h-28 rounded-full mb-4 flex items-center justify-center text-4xl font-bold bg-gradient-to-br ${getAvatarColor(profile.nickname)} shadow-lg shadow-black/50 border-4 border-slate-900`}>
+                {profile.nickname.substring(0, 2).toUpperCase()}
+              </div>
+              <h2 className="text-2xl font-bold text-slate-100">{profile.nickname}</h2>
+              {profile.fullname && <p className="text-slate-400 mt-1">{profile.fullname}</p>}
+              <div className="mt-4 bg-slate-900 px-4 py-2 rounded-lg border border-slate-800 flex items-center gap-2">
+                <span className="text-xs text-slate-500">Hash:</span>
+                <span className="text-sm font-mono text-orange-400">{profile.hash}</span>
+              </div>
+            </>
+          ) : (
+             <div className="flex flex-col items-center">
+               <div className="w-28 h-28 rounded-full bg-slate-800 animate-pulse mb-4"></div>
+               <div className="w-32 h-6 bg-slate-800 animate-pulse rounded"></div>
+             </div>
+          )}
         </div>
 
         {/* Account Section */}
-        <div className="p-4">
+        <div className="p-4 mt-4">
           {error && (
             <p className="text-red-500 text-sm text-center px-2 mb-6 bg-red-950 p-3 rounded-lg">
               <DecryptedText

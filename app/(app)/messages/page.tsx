@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Instrument_Serif } from "next/font/google";
 import { Plus, Search as SearchIcon, MessageCircle, MessageSquare, AlertCircle, RefreshCw, X, Check, Users, Lock, LogOut } from "lucide-react";
-import { getChats, createChat, getInvites, joinChat, leaveChat, ChatRoom, Invite } from "@/lib/api";
-import { getToken } from "@/lib/auth";
+import { getChats, createChat, getInvites, joinChat, leaveChat, ChatRoom, Invite, getMessages } from "@/lib/api";
+import { getToken, getUserHash } from "@/lib/auth";
 import BlurText from "@/components/BlurText";
 
 const instrumentSerif = Instrument_Serif({ weight: "400", subsets: ["latin"] });
@@ -20,6 +20,8 @@ export default function MessagesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentUserHash, setCurrentUserHash] = useState<string | null>(null);
+  const [contactNames, setContactNames] = useState<Record<number, string>>({});
 
   // Create Chat Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -30,11 +32,13 @@ export default function MessagesPage() {
   // Initialize
   useEffect(() => {
     const t = getToken();
-    if (!t) {
+    const hash = getUserHash();
+    if (!t || !hash) {
       router.push("/login");
       return;
     }
     setToken(t);
+    setCurrentUserHash(hash);
   }, [router]);
 
   // Fetch Data
@@ -42,13 +46,42 @@ export default function MessagesPage() {
     if (!token) return;
     try {
       const chatRooms = await getChats(token);
-      setChats(chatRooms.filter(c => c.joined));
+      const joinedChats = chatRooms.filter(c => c.joined);
+      setChats(joinedChats);
       
       const pendingInvites = await getInvites(token);
       setInvites(pendingInvites);
       setError(null);
+
+      // Lazily fetch contact names for private chats
+      joinedChats.forEach(chat => {
+        if (chat.visibility === "private") {
+          // Check if we already have a name (either actual or fallback)
+          setContactNames(prev => {
+            if (prev[chat.chatid]) return prev;
+            
+            // If not, fetch it.
+            getMessages(token, chat.chatid).then(msgs => {
+               const otherUserMsg = msgs.find(m => m.userhash !== currentUserHash);
+               setContactNames(current => ({
+                 ...current,
+                 [chat.chatid]: otherUserMsg ? otherUserMsg.usernick : chat.chatname
+               }));
+            }).catch(() => {
+               // On error (e.g. 403), set a fallback so we don't spam requests
+               setContactNames(current => ({
+                 ...current,
+                 [chat.chatid]: chat.chatname
+               }));
+            });
+            
+            // Return unchanged for now, the promise will update it later
+            return prev;
+          });
+        }
+      });
     } catch (err: any) {
-      console.error(err);
+      // Wir verzichten hier auf console.error, damit der Next.js Error-Overlay nicht bei jedem Polling-Fehler aufploppt
       setError("Daten konnten nicht aktualisiert werden.");
     } finally {
       setLoading(false);
@@ -215,29 +248,37 @@ export default function MessagesPage() {
               <p className="text-sm">Chats werden geladen...</p>
             </div>
           ) : filteredChats.length > 0 ? (
-            filteredChats.map((chat) => (
-              <div
-                key={chat.chatid}
-                onClick={() => router.push(`/messages/${chat.chatid}`)}
-                className="p-4 bg-slate-900 border border-slate-850 hover:bg-slate-800 hover:border-slate-700 transition-all cursor-pointer rounded-2xl active:bg-slate-750 flex items-center justify-between gap-4 shadow-sm"
-              >
-                <div className="flex items-center gap-3.5 min-w-0">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-orange-600 to-orange-500 flex items-center justify-center font-bold text-base shadow-inner text-white select-none">
-                    {chat.chatname.substring(0, 2).toUpperCase()}
+              filteredChats.map((chat) => {
+                const isPublic = chat.visibility === "public";
+                const displayLarge = isPublic ? chat.chatname : (contactNames[chat.chatid] || chat.chatname);
+                const displaySmall = isPublic 
+                  ? `Gruppe • ID: ${chat.chatid}` 
+                  : `${chat.chatname} • ID: ${chat.chatid}`;
+
+                return (
+                  <div
+                    key={chat.chatid}
+                    onClick={() => router.push(`/messages/${chat.chatid}`)}
+                    className="p-4 bg-slate-900 border border-slate-850 hover:bg-slate-800 hover:border-slate-700 transition-all cursor-pointer rounded-2xl active:bg-slate-750 flex items-center justify-between gap-4 shadow-sm"
+                  >
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-orange-600 to-orange-500 flex items-center justify-center font-bold text-base shadow-inner text-white select-none">
+                        {displayLarge.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-slate-200 truncate">{displayLarge}</h3>
+                        <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5 truncate">
+                          {isPublic ? <Users size={12} className="shrink-0" /> : <Lock size={12} className="shrink-0" />}
+                          {displaySmall}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-orange-500 hover:text-orange-400 p-2 shrink-0">
+                      <MessageSquare size={18} />
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-slate-200 truncate">{chat.chatname}</h3>
-                    <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                      {chat.visibility === "public" ? <Users size={12} /> : <Lock size={12} />}
-                      {chat.visibility === "public" ? "Öffentlich" : "Privat"} • ID: {chat.chatid}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-orange-500 hover:text-orange-400 p-2 shrink-0">
-                  <MessageSquare size={18} />
-                </div>
-              </div>
-            ))
+                );
+              })
           ) : (
             <div className="p-12 text-center text-slate-500 bg-slate-900/40 rounded-3xl border border-slate-900/60">
               <MessageCircle size={32} className="mx-auto text-slate-600 mb-2" />

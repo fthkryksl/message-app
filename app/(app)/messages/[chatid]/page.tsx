@@ -128,7 +128,7 @@ export default function ChatRoomPage({ params }: PageProps) {
       setMessages(msgs);
       setError(null);
     } catch (err: any) {
-      console.error("Failed to fetch messages", err);
+      // Wir verzichten auf console.error, um den nervigen Next.js Overlay bei kurzen Verbindungsabbrüchen zu vermeiden
       setError("Verbindungsproblem. Nachrichten können veraltet sein.");
     } finally {
       setLoading(false);
@@ -151,7 +151,7 @@ export default function ChatRoomPage({ params }: PageProps) {
   // 4. Auto-Scroll to bottom when new messages load
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, deletedMsgIds]);
+  }, [messages.length, deletedMsgIds]);
 
   // 5. Send Message Handler
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -460,7 +460,10 @@ export default function ChatRoomPage({ params }: PageProps) {
           >
             <ArrowLeft size={20} />
           </button>
-          <div>
+          <div
+            className="cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => router.push(`/messages/${chatid}/info`)}
+          >
             <h2 className="font-semibold text-lg max-w-[180px] sm:max-w-xs truncate">
               {chatRoom ? chatRoom.chatname : `Chat #${chatid}`}
             </h2>

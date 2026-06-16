@@ -1,14 +1,14 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { MessageCircle, Users, Search, Settings } from "lucide-react";
+import { MessageCircle, Users, Search, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
   { name: "Nachrichten", path: "/messages", icon: MessageCircle },
   { name: "Gruppen", path: "/groups", icon: Users },
   { name: "Suche", path: "/search", icon: Search },
-  { name: "Einstellungen", path: "/settings", icon: Settings },
+  { name: "Profil", path: "/profile", icon: User },
 ];
 
 export default function TabNavigation() {
