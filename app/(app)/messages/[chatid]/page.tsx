@@ -137,6 +137,8 @@ export default function ChatRoomPage({ params }: PageProps) {
     try {
       const msgs = await getMessages(token, chatid);
       setMessages(msgs);
+      // "Zuletzt gelesen" für diesen Chat aktualisieren
+      localStorage.setItem(`lastRead_${chatid}`, new Date().toISOString());
       setError(null);
     } catch (err: any) {
       // Wir verzichten auf console.error, um den nervigen Next.js Overlay bei kurzen Verbindungsabbrüchen zu vermeiden
