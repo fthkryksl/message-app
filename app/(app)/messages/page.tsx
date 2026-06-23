@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Instrument_Serif } from "next/font/google";
 import { Plus, Search as SearchIcon, MessageCircle, MessageSquare, AlertCircle, RefreshCw, X, Check, Users, Lock, LogOut } from "lucide-react";
@@ -22,6 +22,7 @@ export default function MessagesPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentUserHash, setCurrentUserHash] = useState<string | null>(null);
   const [contactNames, setContactNames] = useState<Record<number, string>>({});
+  const fetchedContactNamesRef = useRef<Set<number>>(new Set());
 
   // Create Chat Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -55,28 +56,22 @@ export default function MessagesPage() {
 
       // Lazily fetch contact names for private chats
       joinedChats.forEach(chat => {
-        if (chat.visibility === "private") {
-          // Check if we already have a name (either actual or fallback)
-          setContactNames(prev => {
-            if (prev[chat.chatid]) return prev;
-            
-            // If not, fetch it.
-            getMessages(token, chat.chatid).then(msgs => {
-               const otherUserMsg = msgs.find(m => m.userhash !== currentUserHash);
-               setContactNames(current => ({
-                 ...current,
-                 [chat.chatid]: otherUserMsg ? otherUserMsg.usernick : chat.chatname
-               }));
-            }).catch(() => {
-               // On error (e.g. 403), set a fallback so we don't spam requests
-               setContactNames(current => ({
-                 ...current,
-                 [chat.chatid]: chat.chatname
-               }));
-            });
-            
-            // Return unchanged for now, the promise will update it later
-            return prev;
+        if (chat.visibility === "private" && !fetchedContactNamesRef.current.has(chat.chatid)) {
+          // Mark as initiated immediately so we never double-fetch
+          fetchedContactNamesRef.current.add(chat.chatid);
+          
+          getMessages(token, chat.chatid).then(msgs => {
+             const otherUserMsg = msgs.find(m => m.userhash !== currentUserHash);
+             setContactNames(current => ({
+               ...current,
+               [chat.chatid]: otherUserMsg ? otherUserMsg.usernick : chat.chatname
+             }));
+          }).catch(() => {
+             // On error (e.g. 403), set a fallback so we don't end up empty
+             setContactNames(current => ({
+               ...current,
+               [chat.chatid]: chat.chatname
+             }));
           });
         }
       });
@@ -92,8 +87,8 @@ export default function MessagesPage() {
     if (!token) return;
     fetchData();
     
-    // Auto-poll overview lists every 8 seconds
-    const interval = setInterval(fetchData, 8000);
+    // Auto-poll overview lists every 12 seconds to reduce server load
+    const interval = setInterval(fetchData, 12000);
     return () => clearInterval(interval);
   }, [token]);
 

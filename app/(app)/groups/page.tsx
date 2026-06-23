@@ -55,8 +55,8 @@ export default function GroupsPage() {
     if (!token) return;
     fetchGroups();
     
-    // Auto-poll groups list every 10 seconds
-    const interval = setInterval(fetchGroups, 10000);
+    // Auto-poll groups list every 15 seconds
+    const interval = setInterval(fetchGroups, 15000);
     return () => clearInterval(interval);
   }, [token]);
 

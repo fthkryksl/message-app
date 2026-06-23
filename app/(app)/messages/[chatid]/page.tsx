@@ -140,10 +140,10 @@ export default function ChatRoomPage({ params }: PageProps) {
 
     fetchMessages();
 
-    // Set up polling interval every 3 seconds
+    // Set up polling interval every 5 seconds
     const interval = setInterval(() => {
       fetchMessages();
-    }, 3000);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [token, chatid]);
