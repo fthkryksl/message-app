@@ -47,15 +47,16 @@ export default function MessagesPage() {
     if (!token) return;
     try {
       const chatRooms = await getChats(token);
-      const joinedChats = chatRooms.filter(c => c.joined);
-      setChats(joinedChats);
+      // Nachrichten-Reiter zeigt nur private Chats, denen man beigetreten ist
+      const joinedPrivateChats = chatRooms.filter(c => c.joined && c.visibility === "private");
+      setChats(joinedPrivateChats);
       
       const pendingInvites = await getInvites(token);
       setInvites(pendingInvites);
       setError(null);
 
       // Lazily fetch contact names for private chats
-      joinedChats.forEach(chat => {
+      joinedPrivateChats.forEach(chat => {
         if (chat.visibility === "private" && !fetchedContactNamesRef.current.has(chat.chatid)) {
           // Mark as initiated immediately so we never double-fetch
           fetchedContactNamesRef.current.add(chat.chatid);
