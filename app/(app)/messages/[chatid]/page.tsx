@@ -19,7 +19,8 @@ import {
   DoorOpen,
   UserPlus,
   Compass,
-  AlertCircle
+  AlertCircle,
+  MessageCircle
 } from "lucide-react";
 import { getMessages, postMessage, getChats, deleteChat, leaveChat, inviteUser, getProfiles, ChatMessage, ChatRoom, UserProfile } from "@/lib/api";
 import { getToken, getUserHash } from "@/lib/auth";
@@ -75,6 +76,16 @@ export default function ChatRoomPage({ params }: PageProps) {
   // Refs for auto-scrolling
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Smart Scrolling States
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [hasUnread, setHasUnread] = useState(false);
+  const prevMsgCountRef = useRef(0);
+
+  // Camera switch state
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
 
   // 1. Initial Authentication & Parameter Loading
   useEffect(() => {
@@ -94,7 +105,7 @@ export default function ChatRoomPage({ params }: PageProps) {
         setDeletedMsgIds(JSON.parse(storedDeleted));
       }
     } catch (e) {
-      console.error(e);
+      // Fehler stillschweigend ignorieren
     }
   }, [chatid, router]);
 
@@ -113,7 +124,7 @@ export default function ChatRoomPage({ params }: PageProps) {
         const userProfiles = await getProfiles(token);
         setProfiles(userProfiles);
       } catch (err: any) {
-        console.error("Failed to load chat info or profiles", err);
+        // console.error entfernt, damit das Next.js Error-Overlay bei kurzen Verbindungsabbrüchen nicht auftaucht
       }
     };
 
@@ -126,9 +137,11 @@ export default function ChatRoomPage({ params }: PageProps) {
     try {
       const msgs = await getMessages(token, chatid);
       setMessages(msgs);
+      // "Zuletzt gelesen" für diesen Chat aktualisieren
+      localStorage.setItem(`lastRead_${chatid}`, new Date().toISOString());
       setError(null);
     } catch (err: any) {
-      console.error("Failed to fetch messages", err);
+      // Wir verzichten auf console.error, um den nervigen Next.js Overlay bei kurzen Verbindungsabbrüchen zu vermeiden
       setError("Verbindungsproblem. Nachrichten können veraltet sein.");
     } finally {
       setLoading(false);
@@ -140,18 +153,35 @@ export default function ChatRoomPage({ params }: PageProps) {
 
     fetchMessages();
 
-    // Set up polling interval every 3 seconds
+    // Set up polling interval every 5 seconds
     const interval = setInterval(() => {
       fetchMessages();
-    }, 3000);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [token, chatid]);
 
-  // 4. Auto-Scroll to bottom when new messages load
+  // 4. Smart Auto-Scroll to bottom when new messages load
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, deletedMsgIds]);
+    if (messages.length > prevMsgCountRef.current) {
+      if (isAtBottom) {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      } else {
+        setHasUnread(true);
+      }
+    }
+    prevMsgCountRef.current = messages.length;
+  }, [messages.length]); // Scroll only depends on new messages, not local deletions
+
+  const handleScroll = () => {
+    if (!scrollContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+    const atBottom = scrollHeight - scrollTop - clientHeight < 50;
+    setIsAtBottom(atBottom);
+    if (atBottom) {
+      setHasUnread(false);
+    }
+  };
 
   // 5. Send Message Handler
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -201,6 +231,9 @@ export default function ChatRoomPage({ params }: PageProps) {
 
       // Reset Drafts
       setDraftText("");
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+      }
       setDraftPhoto(null);
       setDraftFile(null);
       setDraftLocation(null);
@@ -222,7 +255,7 @@ export default function ChatRoomPage({ params }: PageProps) {
     try {
       setCameraActive(true);
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480, facingMode: "user" },
+        video: { width: 640, height: 480, facingMode: facingMode },
         audio: false
       });
       setCameraStream(stream);
@@ -243,6 +276,19 @@ export default function ChatRoomPage({ params }: PageProps) {
     setCameraStream(null);
     setCameraActive(false);
   };
+
+  // Toggle Camera
+  const toggleCamera = () => {
+    setFacingMode(prev => prev === "user" ? "environment" : "user");
+  };
+
+  useEffect(() => {
+    if (cameraActive) {
+      stopCamera();
+      startCamera();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [facingMode]);
 
   const takePhoto = () => {
     if (videoRef.current) {
@@ -460,7 +506,10 @@ export default function ChatRoomPage({ params }: PageProps) {
           >
             <ArrowLeft size={20} />
           </button>
-          <div>
+          <div
+            className="cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => router.push(`/messages/${chatid}/info`)}
+          >
             <h2 className="font-semibold text-lg max-w-[180px] sm:max-w-xs truncate">
               {chatRoom ? chatRoom.chatname : `Chat #${chatid}`}
             </h2>
@@ -538,31 +587,79 @@ export default function ChatRoomPage({ params }: PageProps) {
       )}
 
       {/* ── Message Area ── */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-950 pb-24">
+      <div 
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-950 pb-24 relative"
+      >
         {loading ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-2">
             <RefreshCw className="animate-spin text-orange-500" size={24} />
             <p className="text-sm">Nachrichten werden geladen...</p>
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-slate-500 p-8 text-center">
-            <p className="font-medium text-slate-400">Keine Nachrichten vorhanden</p>
-            <p className="text-xs max-w-xs mt-1">Schreibe die erste Nachricht, um die Unterhaltung zu starten!</p>
+          <div className="flex flex-col items-center justify-center h-full text-slate-500 p-8 text-center max-w-sm mx-auto my-auto mt-20 bg-slate-900/40 rounded-3xl border border-slate-800/50 shadow-inner">
+            <div className="w-16 h-16 bg-slate-800/50 rounded-full flex items-center justify-center mb-4">
+              <MessageCircle className="text-slate-600" size={32} />
+            </div>
+            <p className="font-semibold text-slate-300">Keine Nachrichten</p>
+            <p className="text-xs text-slate-500 mt-2 max-w-[220px] leading-relaxed">
+              Sei der Erste und starte die Unterhaltung mit einer Nachricht!
+            </p>
           </div>
         ) : (
-          messages
-            .filter((msg) => !deletedMsgIds.includes(msg.id))
-            .map((msg) => {
-              const isOwn = isOwnMessage(msg);
-              const textContent = msg.text || "";
-              const replyInfo = renderQuotedReply(textContent);
-              const fileAttachment = parseAttachedFile((replyInfo.isReply ? replyInfo.cleanText : textContent) || "");
+          (() => {
+            let lastDate = "";
+            const today = new Date();
+            const todayStr = today.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-              return (
-                <div
-                  key={msg.id}
-                  className={`flex flex-col ${isOwn ? "items-end" : "items-start"} group relative`}
-                >
+            return messages
+              .filter((msg) => !deletedMsgIds.includes(msg.id))
+              .map((msg) => {
+                let msgDateStr = msg.time;
+                let msgTimeStr = msg.time;
+
+                const timeMatch = msg.time.match(/^(\d{4}-\d{2}-\d{2})_(\d{2})-(\d{2})-\d{2}$/);
+                if (timeMatch) {
+                  const [_, datePart, hour, minute] = timeMatch;
+                  const dateObj = new Date(datePart);
+                  if (!isNaN(dateObj.getTime())) {
+                    msgDateStr = dateObj.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' });
+                  } else {
+                    msgDateStr = datePart;
+                  }
+                  msgTimeStr = `${hour}:${minute}`;
+                } else {
+                  const dateObj = new Date(msg.time.replace(' ', 'T'));
+                  if (!isNaN(dateObj.getTime())) {
+                    msgDateStr = dateObj.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    msgTimeStr = dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                  }
+                }
+
+                const showDateSeparator = msgDateStr !== lastDate && msgDateStr !== 'Invalid Date';
+                if (showDateSeparator) lastDate = msgDateStr;
+
+                const isOwn = isOwnMessage(msg);
+                const textContent = msg.text || "";
+                const replyInfo = renderQuotedReply(textContent);
+                const fileAttachment = parseAttachedFile((replyInfo.isReply ? replyInfo.cleanText : textContent) || "");
+
+                return (
+                  <React.Fragment key={msg.id}>
+                    {showDateSeparator && (
+                      <div className="flex items-center justify-center my-6">
+                        <div className="bg-slate-800/80 text-slate-400 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-sm border border-slate-700/50">
+                          {msgDateStr === todayStr ? "Heute" : msgDateStr === yesterdayStr ? "Gestern" : msgDateStr}
+                        </div>
+                      </div>
+                    )}
+                    <div
+                      className={`flex flex-col ${isOwn ? "items-end" : "items-start"} group relative`}
+                    >
                   {/* Sender Nickname */}
                   {!isOwn && (
                     <span className="text-xs text-slate-400 mb-1 ml-2 font-medium">
@@ -675,7 +772,7 @@ export default function ChatRoomPage({ params }: PageProps) {
                       {/* Info Bar inside Bubble */}
                       <div className="flex items-center justify-end gap-1 mt-1 text-[10px] opacity-70">
                         {msg.important && <span className="text-[9px] font-bold tracking-wide uppercase mr-1">Dringend</span>}
-                        <span>{msg.time}</span>
+                        <span>{msgTimeStr}</span>
                       </div>
                     </div>
 
@@ -698,8 +795,24 @@ export default function ChatRoomPage({ params }: PageProps) {
                     </div>
                   </div>
                 </div>
-              );
-            })
+              </React.Fragment>
+            );
+          });
+        })()
+        )}
+        
+        {hasUnread && (
+          <div className="sticky bottom-4 left-0 right-0 flex justify-center pointer-events-none z-10 animate-in slide-in-from-bottom-5">
+            <button
+              onClick={() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+                setHasUnread(false);
+              }}
+              className="pointer-events-auto bg-orange-600/95 backdrop-blur text-white shadow-lg shadow-orange-900/20 border border-orange-500 rounded-full px-4 py-1.5 text-xs font-bold animate-bounce flex items-center gap-2 transition-transform active:scale-95"
+            >
+              Neue Nachrichten ↓
+            </button>
+          </div>
         )}
         <div ref={messagesEndRef} />
       </div>
@@ -816,13 +929,25 @@ export default function ChatRoomPage({ params }: PageProps) {
           </button>
 
           {/* Text Input */}
-          <input
-            type="text"
+          <textarea
+            ref={textareaRef}
             placeholder={draftFile ? "Datei angehängt. Klicke Senden..." : "Nachricht schreiben..."}
             value={draftText}
-            onChange={(e) => setDraftText(e.target.value)}
+            onChange={(e) => {
+              setDraftText(e.target.value);
+              e.target.style.height = "auto";
+              e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
             disabled={sending || !!draftFile}
-            className="flex-1 bg-slate-950 text-white border border-slate-800 px-4 py-2.5 rounded-full text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent min-w-0"
+            rows={1}
+            className="flex-1 bg-slate-950 text-white border border-slate-800 px-4 py-2.5 rounded-3xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent min-w-0 resize-none overflow-y-auto"
+            style={{ minHeight: "44px", maxHeight: "120px" }}
           />
 
           {/* Mark as Important toggle */}
@@ -873,7 +998,14 @@ export default function ChatRoomPage({ params }: PageProps) {
             />
           </div>
 
-          <div className="flex gap-8 mb-6">
+          <div className="flex gap-8 mb-6 items-center">
+            <button
+              onClick={toggleCamera}
+              className="p-3 bg-slate-800 hover:bg-slate-700 rounded-full text-slate-300 transition-colors shadow-lg"
+              aria-label="Kamera wechseln"
+            >
+              <RefreshCw size={20} />
+            </button>
             <button
               onClick={takePhoto}
               className="w-16 h-16 bg-white hover:bg-slate-100 rounded-full border-4 border-slate-800 flex items-center justify-center shadow-lg transition-transform active:scale-95"
@@ -881,6 +1013,7 @@ export default function ChatRoomPage({ params }: PageProps) {
             >
               <div className="w-10 h-10 bg-orange-600 rounded-full"></div>
             </button>
+            <div className="w-[44px]"></div> {/* Spacer for center alignment */}
           </div>
         </div>
       )}
