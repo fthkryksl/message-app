@@ -118,7 +118,6 @@ export default function ChatInfoPage({ params }: PageProps) {
 
   const isPublic = chatRoom.visibility === "public";
 
-  // Extract unique participants from messages
   const participantHashes = Array.from(
     new Set(messages.map((m) => m.userhash)),
   );
@@ -163,7 +162,6 @@ export default function ChatInfoPage({ params }: PageProps) {
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-950 text-white pb-10">
-      {/* Header */}
       <header className="p-4 flex items-center z-20">
         <button
           onClick={() => router.back()}
@@ -173,7 +171,6 @@ export default function ChatInfoPage({ params }: PageProps) {
         </button>
       </header>
 
-      {/* Main Profile Info */}
       <div className="flex flex-col items-center mt-4 px-6">
         <div
           className={`w-32 h-32 rounded-full mb-4 flex items-center justify-center text-4xl font-bold bg-gradient-to-br ${getAvatarColor(displayName)} shadow-lg shadow-black/50 border-4 border-slate-900`}
@@ -186,7 +183,6 @@ export default function ChatInfoPage({ params }: PageProps) {
           Aktiv
         </p>
 
-        {/* Action Buttons */}
         <div className="flex items-center justify-center gap-4 mt-8 w-full max-w-xs">
           {!isPublic ? (
             <>
@@ -229,7 +225,6 @@ export default function ChatInfoPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Details Section */}
       <div className="mt-10 px-6 max-w-md mx-auto w-full">
         <h2 className="text-center font-serif text-2xl italic text-slate-300 mb-6 border-b border-slate-800/60 pb-4">
           Infos
@@ -274,7 +269,6 @@ export default function ChatInfoPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Participants List (for public groups) */}
       {isPublic && participants.length > 0 && (
         <div className="mt-10 px-6 max-w-md mx-auto w-full">
           <h2 className="text-center font-serif text-2xl italic text-slate-300 mb-6 border-b border-slate-800/60 pb-4">

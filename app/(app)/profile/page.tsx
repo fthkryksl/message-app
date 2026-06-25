@@ -3,17 +3,18 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Instrument_Serif } from "next/font/google";
-import { LogOut, UserX, Loader2, User } from "lucide-react";
+import { LogOut, UserX, Loader2 } from "lucide-react";
 import { logout, deregister, getProfiles, UserProfile } from "@/lib/api";
 import { getToken, getUserHash } from "@/lib/auth";
-import BlurText from "@/components/BlurText";
-import ShinyText from "@/components/ShinyText";
-import DecryptedText from "@/components/DecryptedText";
+import BlurText from "@/components/ReactBits/BlurText";
+import ShinyText from "@/components/ReactBits/ShinyText";
+import DecryptedText from "@/components/ReactBits/DecryptedText";
 
 const instrumentSerif = Instrument_Serif({ weight: "400", subsets: ["latin"] });
 
 export default function ProfilePage() {
   const router = useRouter();
+
   const [loadingLogout, setLoadingLogout] = useState(false);
   const [loadingDeregister, setLoadingDeregister] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +108,6 @@ export default function ProfilePage() {
 
   return (
     <div className="w-full h-full bg-slate-950 text-white flex flex-col">
-      {/* Header */}
       <div className="sticky top-0 bg-slate-900 border-b border-slate-700 p-4 z-10 shrink-0">
         <h1 className={`${instrumentSerif.className} text-2xl font-bold`}>
           <BlurText
@@ -120,7 +120,6 @@ export default function ProfilePage() {
         </h1>
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="flex flex-col items-center justify-center p-8 border-b border-slate-700">
           {!loadingProfile && profile ? (
@@ -151,7 +150,6 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* Account Section */}
         <div className="p-4 mt-4">
           {error && (
             <p className="text-red-500 text-sm text-center px-2 mb-6 bg-red-950 p-3 rounded-lg">
@@ -165,7 +163,6 @@ export default function ProfilePage() {
           )}
 
           <div className="space-y-3">
-            {/* Logout */}
             <button
               onClick={handleLogout}
               disabled={loadingLogout || loadingDeregister}
@@ -196,7 +193,6 @@ export default function ProfilePage() {
               )}
             </button>
 
-            {/* Deregister */}
             <button
               onClick={handleDeregister}
               disabled={loadingLogout || loadingDeregister}

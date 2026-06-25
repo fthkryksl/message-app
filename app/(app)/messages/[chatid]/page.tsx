@@ -12,7 +12,6 @@ import {
   FileText,
   ExternalLink,
   RefreshCw,
-  AlertTriangle,
   Trash2,
   CornerUpLeft,
   X,
@@ -34,8 +33,6 @@ import {
   UserProfile,
 } from "@/lib/api";
 import { getToken, getUserHash } from "@/lib/auth";
-import BlurText from "@/components/BlurText";
-import DecryptedText from "@/components/DecryptedText";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -48,11 +45,9 @@ export default function ChatRoomPage({ params }: PageProps) {
   const chatid = Number(resolvedParams.chatid);
   const router = useRouter();
 
-  // Authentication State
   const [token, setToken] = useState<string | null>(null);
   const [currentUserHash, setCurrentUserHash] = useState<string | null>(null);
 
-  // Chat Metadata
   const [chatRoom, setChatRoom] = useState<ChatRoom | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
@@ -60,7 +55,6 @@ export default function ChatRoomPage({ params }: PageProps) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Input & Draft States
   const [draftText, setDraftText] = useState("");
   const [draftPhoto, setDraftPhoto] = useState<string | null>(null);
   const [draftFile, setDraftFile] = useState<{
@@ -75,26 +69,21 @@ export default function ChatRoomPage({ params }: PageProps) {
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [importantFlag, setImportantFlag] = useState(false);
 
-  // Camera States
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Locales & UI States
   const [gettingLocation, setGettingLocation] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteSearchTerm, setInviteSearchTerm] = useState("");
   const [largePhotoUrl, setLargePhotoUrl] = useState<string | null>(null);
 
-  // Local Deleted Message IDs (stored in localStorage)
   const [deletedMsgIds, setDeletedMsgIds] = useState<number[]>([]);
 
-  // Refs for auto-scrolling
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. Initial Authentication & Parameter Loading
   useEffect(() => {
     const t = getToken();
     const hash = getUserHash();
@@ -105,7 +94,6 @@ export default function ChatRoomPage({ params }: PageProps) {
     setToken(t);
     setCurrentUserHash(hash);
 
-    // Load deleted messages from localStorage
     try {
       const storedDeleted = localStorage.getItem(`deleted_msgs_${chatid}`);
       if (storedDeleted) {
@@ -116,7 +104,6 @@ export default function ChatRoomPage({ params }: PageProps) {
     }
   }, [chatid, router]);
 
-  // 2. Fetch Chat Metadata & Profiles
   useEffect(() => {
     if (!token) return;
 
@@ -138,7 +125,6 @@ export default function ChatRoomPage({ params }: PageProps) {
     fetchMetadata();
   }, [token, chatid]);
 
-  // 3. Fetch Messages & Setup Polling
   const fetchMessages = async () => {
     if (!token) return;
     try {
@@ -146,7 +132,6 @@ export default function ChatRoomPage({ params }: PageProps) {
       setMessages(msgs);
       setError(null);
     } catch (err: any) {
-      // Wir verzichten auf console.error, um den nervigen Next.js Overlay bei kurzen Verbindungsabbrüchen zu vermeiden
       setError("Verbindungsproblem. Nachrichten können veraltet sein.");
     } finally {
       setLoading(false);
@@ -158,7 +143,6 @@ export default function ChatRoomPage({ params }: PageProps) {
 
     fetchMessages();
 
-    // Set up polling interval every 3 seconds
     const interval = setInterval(() => {
       fetchMessages();
     }, 3000);
@@ -166,12 +150,10 @@ export default function ChatRoomPage({ params }: PageProps) {
     return () => clearInterval(interval);
   }, [token, chatid]);
 
-  // 4. Auto-Scroll to bottom when new messages load
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length, deletedMsgIds]);
 
-  // 5. Send Message Handler
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!token) return;
@@ -183,7 +165,6 @@ export default function ChatRoomPage({ params }: PageProps) {
     try {
       let finalAddressText = draftText;
 
-      // Reply formatting: » Nick: QuotedSnippet\n\nOriginalText
       if (replyingTo) {
         const snippet = replyingTo.text
           ? replyingTo.text.startsWith("[FILE:")
@@ -199,7 +180,6 @@ export default function ChatRoomPage({ params }: PageProps) {
         finalAddressText = `» ${replyingTo.usernick}: ${snippet}\n\n${finalAddressText}`;
       }
 
-      // PDF / Video inline base64 attachment formatting in text field
       if (draftFile) {
         finalAddressText = `[FILE:${draftFile.name}|${draftFile.type}]${draftFile.dataUrl}`;
       }
@@ -217,7 +197,6 @@ export default function ChatRoomPage({ params }: PageProps) {
 
       await postMessage(token, params);
 
-      // Reset Drafts
       setDraftText("");
       setDraftPhoto(null);
       setDraftFile(null);
@@ -225,7 +204,6 @@ export default function ChatRoomPage({ params }: PageProps) {
       setReplyingTo(null);
       setImportantFlag(false);
 
-      // Re-fetch
       await fetchMessages();
     } catch (err: any) {
       setError(err.message ?? "Fehler beim Versenden der Nachricht.");
@@ -234,7 +212,6 @@ export default function ChatRoomPage({ params }: PageProps) {
     }
   };
 
-  // 6. Camera Activation
   const startCamera = async () => {
     setError(null);
     try {
@@ -279,7 +256,6 @@ export default function ChatRoomPage({ params }: PageProps) {
     }
   };
 
-  // 7. Location Access
   const retrieveLocation = () => {
     if (!navigator.geolocation) {
       setError("GPS Ortung wird von diesem Browser nicht unterstützt.");
@@ -304,7 +280,6 @@ export default function ChatRoomPage({ params }: PageProps) {
     );
   };
 
-  // 8. File Picker Handling
   const triggerFilePicker = () => {
     fileInputRef.current?.click();
   };
@@ -322,7 +297,6 @@ export default function ChatRoomPage({ params }: PageProps) {
     reader.onload = (evt) => {
       const result = evt.target?.result as string;
       if (file.type.startsWith("image/")) {
-        // Standardize image to a resized PNG using a canvas
         const img = new Image();
         img.onload = () => {
           const canvas = document.createElement("canvas");
@@ -366,7 +340,6 @@ export default function ChatRoomPage({ params }: PageProps) {
     reader.readAsDataURL(file);
   };
 
-  // 9. Leave & Delete Chat Logic
   const handleLeaveChat = async () => {
     if (!token) return;
     const confirm = window.confirm(
@@ -397,7 +370,6 @@ export default function ChatRoomPage({ params }: PageProps) {
     }
   };
 
-  // 10. Invite User Logic
   const handleInviteUser = async (hash: string) => {
     if (!token) return;
     try {
@@ -409,7 +381,6 @@ export default function ChatRoomPage({ params }: PageProps) {
     }
   };
 
-  // 11. Delete Message Locally
   const handleDeleteMessageLocally = (id: number) => {
     const updated = [...deletedMsgIds, id];
     setDeletedMsgIds(updated);
@@ -420,14 +391,11 @@ export default function ChatRoomPage({ params }: PageProps) {
     }
   };
 
-  // 12. Helper: Check if Message is own
   const isOwnMessage = (msg: ChatMessage) => {
     if (currentUserHash && msg.userhash === currentUserHash) return true;
     return false;
   };
 
-  // 13. UI Parsers
-  // 13a. Quoted Reply Parser
   const renderQuotedReply = (text: string) => {
     const match = text.match(/^» ([^:]+): ([^\n]+)\n\n([\s\S]*)$/);
     if (!match) return { isReply: false, rawText: text };
@@ -439,7 +407,6 @@ export default function ChatRoomPage({ params }: PageProps) {
     };
   };
 
-  // 13b. PDF/Video Parser
   const parseAttachedFile = (text: string) => {
     const match = text.match(/^\[FILE:([^|]+)\|([^\]]+)\](data:[\s\S]+)$/);
     if (!match) return null;
@@ -450,7 +417,6 @@ export default function ChatRoomPage({ params }: PageProps) {
     };
   };
 
-  // 13c. Text Link Parsing
   const renderTextWithLinks = (text: string) => {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const parts = text.split(urlRegex);
@@ -480,7 +446,6 @@ export default function ChatRoomPage({ params }: PageProps) {
 
   return (
     <div className="flex flex-col h-screen bg-slate-950 text-white relative">
-      {/* ── Header ── */}
       <header className="sticky top-0 bg-slate-900 border-b border-slate-800 p-4 z-20 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-3">
           <button
@@ -556,7 +521,6 @@ export default function ChatRoomPage({ params }: PageProps) {
         </div>
       </header>
 
-      {/* ── Error Banner ── */}
       {error && (
         <div className="bg-red-950 border-b border-red-900 text-red-300 px-4 py-2 text-xs flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 font-medium">
@@ -572,7 +536,6 @@ export default function ChatRoomPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* ── Message Area ── */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-950 pb-24">
         {loading ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-2">
@@ -604,14 +567,12 @@ export default function ChatRoomPage({ params }: PageProps) {
                   key={msg.id}
                   className={`flex flex-col ${isOwn ? "items-end" : "items-start"} group relative`}
                 >
-                  {/* Sender Nickname */}
                   {!isOwn && (
                     <span className="text-xs text-slate-400 mb-1 ml-2 font-medium">
                       {msg.usernick}
                     </span>
                   )}
 
-                  {/* Message Bubble Container */}
                   <div className="max-w-[85%] sm:max-w-md relative">
                     <div
                       className={`rounded-2xl p-3.5 shadow-sm text-sm relative transition-all ${
@@ -624,7 +585,6 @@ export default function ChatRoomPage({ params }: PageProps) {
                           : "bg-slate-900 text-slate-100 rounded-tl-none border border-slate-800"
                       }`}
                     >
-                      {/* Replying indicator */}
                       {replyInfo.isReply && (
                         <div className="bg-black/20 border-l-2 border-orange-400 pl-2 py-1 mb-2 rounded-r text-xs text-slate-200">
                           <p className="font-semibold text-[10px] text-orange-300">
@@ -634,7 +594,6 @@ export default function ChatRoomPage({ params }: PageProps) {
                         </div>
                       )}
 
-                      {/* Display Image attachment (Server photo via photoid) */}
                       {msg.photoid && (
                         <div className="mb-2 rounded-lg overflow-hidden border border-black/10 bg-slate-950 cursor-pointer group/photo relative max-w-full">
                           <img
@@ -653,7 +612,6 @@ export default function ChatRoomPage({ params }: PageProps) {
                         </div>
                       )}
 
-                      {/* Display PDF or Video attachment from base64 string */}
                       {fileAttachment && (
                         <div className="mb-2 rounded-lg overflow-hidden border border-slate-800 bg-slate-950 p-2">
                           {fileAttachment.type.startsWith("video/") ? (
@@ -692,7 +650,6 @@ export default function ChatRoomPage({ params }: PageProps) {
                         </div>
                       )}
 
-                      {/* Display Location coordinates */}
                       {msg.position && (
                         <div className="mb-2 bg-slate-950 border border-slate-800 rounded-lg p-2.5 flex items-center justify-between gap-4">
                           <div className="flex items-center gap-2">
@@ -720,7 +677,6 @@ export default function ChatRoomPage({ params }: PageProps) {
                         </div>
                       )}
 
-                      {/* Render text with resolved URLs */}
                       {(!fileAttachment ||
                         (
                           (replyInfo.isReply
@@ -738,7 +694,6 @@ export default function ChatRoomPage({ params }: PageProps) {
                         </p>
                       )}
 
-                      {/* Info Bar inside Bubble */}
                       <div className="flex items-center justify-end gap-1 mt-1 text-[10px] opacity-70">
                         {msg.important && (
                           <span className="text-[9px] font-bold tracking-wide uppercase mr-1">
@@ -749,7 +704,6 @@ export default function ChatRoomPage({ params }: PageProps) {
                       </div>
                     </div>
 
-                    {/* Hover Actions Panel */}
                     <div className="absolute right-0 top-1/2 -translate-y-1/2 -translate-x-full pr-2 opacity-0 group-hover:opacity-100 flex items-center gap-1.5 transition-opacity z-10 bg-slate-950/80 rounded-full py-1 px-2 border border-slate-800/80 shadow-md">
                       <button
                         onClick={() => setReplyingTo(msg)}
@@ -774,7 +728,6 @@ export default function ChatRoomPage({ params }: PageProps) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* ── Draft Previews ── */}
       {(replyingTo || draftPhoto || draftFile || draftLocation) && (
         <div className="absolute bottom-20 left-4 right-4 bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-2xl z-10 space-y-2 flex flex-col">
           <div className="flex justify-between items-center pb-1.5 border-b border-slate-800">
@@ -794,7 +747,6 @@ export default function ChatRoomPage({ params }: PageProps) {
             </button>
           </div>
 
-          {/* Reply Quote Preview */}
           {replyingTo && (
             <div className="bg-slate-950 p-2 rounded-lg border-l-2 border-orange-500 flex items-center justify-between text-xs text-slate-300">
               <div>
@@ -814,7 +766,6 @@ export default function ChatRoomPage({ params }: PageProps) {
             </div>
           )}
 
-          {/* Photo attachment draft */}
           {draftPhoto && (
             <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-slate-800 self-start">
               <img
@@ -831,7 +782,6 @@ export default function ChatRoomPage({ params }: PageProps) {
             </div>
           )}
 
-          {/* PDF or Video draft */}
           {draftFile && (
             <div className="flex items-center justify-between bg-slate-950 p-2 rounded-lg border border-slate-800 text-xs">
               <div className="flex items-center gap-2 min-w-0">
@@ -849,7 +799,6 @@ export default function ChatRoomPage({ params }: PageProps) {
             </div>
           )}
 
-          {/* Location coordinate draft */}
           {draftLocation && (
             <div className="flex items-center justify-between bg-slate-950 p-2 rounded-lg border border-slate-800 text-xs">
               <div className="flex items-center gap-2">
@@ -870,13 +819,11 @@ export default function ChatRoomPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* ── Input Bar ── */}
       <div className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 p-3 z-10">
         <form
           onSubmit={handleSendMessage}
           className="max-w-4xl mx-auto flex items-center gap-2"
         >
-          {/* File input (Hidden) */}
           <input
             type="file"
             ref={fileInputRef}
@@ -885,7 +832,6 @@ export default function ChatRoomPage({ params }: PageProps) {
             accept="image/*,video/*,application/pdf"
           />
 
-          {/* Add media button */}
           <button
             type="button"
             onClick={triggerFilePicker}
@@ -895,7 +841,6 @@ export default function ChatRoomPage({ params }: PageProps) {
             <Paperclip size={20} />
           </button>
 
-          {/* Camera button */}
           <button
             type="button"
             onClick={startCamera}
@@ -905,7 +850,6 @@ export default function ChatRoomPage({ params }: PageProps) {
             <CameraIcon size={20} />
           </button>
 
-          {/* Location button */}
           <button
             type="button"
             onClick={retrieveLocation}
@@ -920,7 +864,6 @@ export default function ChatRoomPage({ params }: PageProps) {
             <MapPin size={20} />
           </button>
 
-          {/* Text Input */}
           <input
             type="text"
             placeholder={
@@ -934,7 +877,6 @@ export default function ChatRoomPage({ params }: PageProps) {
             className="flex-1 bg-slate-950 text-white border border-slate-800 px-4 py-2.5 rounded-full text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent min-w-0"
           />
 
-          {/* Mark as Important toggle */}
           <button
             type="button"
             onClick={() => setImportantFlag(!importantFlag)}
@@ -948,7 +890,6 @@ export default function ChatRoomPage({ params }: PageProps) {
             Dringend
           </button>
 
-          {/* Send button */}
           <button
             type="submit"
             disabled={
@@ -963,7 +904,6 @@ export default function ChatRoomPage({ params }: PageProps) {
         </form>
       </div>
 
-      {/* ── Camera Interface Overlay ── */}
       {cameraActive && (
         <div className="absolute inset-0 bg-black z-50 flex flex-col items-center justify-between p-4">
           <div className="w-full flex justify-between items-center text-sm font-semibold text-slate-400">
@@ -997,7 +937,6 @@ export default function ChatRoomPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* ── Invite User Modal ── */}
       {showInviteModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-40 animate-in fade-in duration-200">
           <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-5 relative">
@@ -1054,7 +993,6 @@ export default function ChatRoomPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* ── Photo Lightbox Modal ── */}
       {largePhotoUrl && (
         <div
           className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4 cursor-zoom-out"

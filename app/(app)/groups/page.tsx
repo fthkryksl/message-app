@@ -9,7 +9,6 @@ import {
   Users,
   Lock,
   LogOut,
-  Check,
   ArrowRight,
   RefreshCw,
   AlertCircle,
@@ -25,27 +24,25 @@ import {
   ChatRoom,
 } from "@/lib/api";
 import { getToken } from "@/lib/auth";
-import BlurText from "@/components/BlurText";
+import BlurText from "@/components/ReactBits/BlurText";
 
 const instrumentSerif = Instrument_Serif({ weight: "400", subsets: ["latin"] });
 
 export default function GroupsPage() {
   const router = useRouter();
+
   const [token, setToken] = useState<string | null>(null);
 
-  // States
   const [groups, setGroups] = useState<ChatRoom[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Create Chat Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newChatName, setNewChatName] = useState("");
   const [newChatIsPublic, setNewChatIsPublic] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  // Initial Auth
   useEffect(() => {
     const t = getToken();
     if (!t) {
@@ -55,7 +52,6 @@ export default function GroupsPage() {
     setToken(t);
   }, [router]);
 
-  // Fetch groups
   const fetchGroups = async () => {
     if (!token) return;
     try {
@@ -74,12 +70,10 @@ export default function GroupsPage() {
     if (!token) return;
     fetchGroups();
 
-    // Auto-poll groups list every 10 seconds
     const interval = setInterval(fetchGroups, 10000);
     return () => clearInterval(interval);
   }, [token]);
 
-  // Join Chat
   const handleJoinChat = async (chatid: number) => {
     if (!token) return;
     setLoading(true);
@@ -93,7 +87,6 @@ export default function GroupsPage() {
     }
   };
 
-  // Leave Chat
   const handleLeaveChat = async (chatid: number) => {
     if (!token) return;
     const confirm = window.confirm(
@@ -111,7 +104,6 @@ export default function GroupsPage() {
     }
   };
 
-  // Delete Chat
   const handleDeleteChat = async (chatid: number) => {
     if (!token) return;
     const confirm = window.confirm(
@@ -129,7 +121,6 @@ export default function GroupsPage() {
     }
   };
 
-  // Create Chat
   const handleCreateChat = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token || !newChatName.trim()) return;
@@ -145,7 +136,6 @@ export default function GroupsPage() {
       setShowCreateModal(false);
       setNewChatName("");
       setNewChatIsPublic(false);
-      // Navigate straight to new group chat
       router.push(`/messages/${chatid}`);
     } catch (err: any) {
       setError(err.message ?? "Fehler beim Erstellen der Gruppe.");
@@ -154,14 +144,12 @@ export default function GroupsPage() {
     }
   };
 
-  // Filter groups based on search term
   const filteredGroups = groups.filter((group) =>
     group.chatname.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
     <div className="w-full h-full bg-slate-950 text-white flex flex-col min-h-screen">
-      {/* Header */}
       <div className="sticky top-0 bg-slate-900 border-b border-slate-800 p-4 z-10 shadow-md">
         <div className="flex items-center justify-between mb-4">
           <h1 className={`${instrumentSerif.className} text-2xl font-bold`}>
@@ -197,7 +185,6 @@ export default function GroupsPage() {
           </div>
         </div>
 
-        {/* Search Bar */}
         <div className="relative">
           <SearchIcon
             size={18}
@@ -213,7 +200,6 @@ export default function GroupsPage() {
         </div>
       </div>
 
-      {/* Content Area */}
       <div className="flex-1 overflow-y-auto p-4">
         {error && (
           <div className="mb-4 p-3 bg-red-950/60 border border-red-900 rounded-xl text-red-300 text-xs flex items-center gap-2">
@@ -314,7 +300,6 @@ export default function GroupsPage() {
         </div>
       </div>
 
-      {/* Create Chat Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-40 animate-in fade-in duration-200">
           <div className="w-full max-w-sm bg-slate-900 border border-slate-850 rounded-2xl shadow-2xl p-5 relative">

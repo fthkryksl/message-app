@@ -7,25 +7,26 @@ import { ChevronRight, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { register } from "@/lib/api";
 import { saveToken, saveUserHash } from "@/lib/auth";
-import ShinyText from "@/components/ShinyText";
-import DecryptedText from "@/components/DecryptedText";
-import BlurText from "@/components/BlurText";
-import CircularText from "@/components/CircularText";
-import Grainient from "@/components/Grainient";
+import ShinyText from "@/components/ReactBits/ShinyText";
+import DecryptedText from "@/components/ReactBits/DecryptedText";
+import BlurText from "@/components/ReactBits/BlurText";
+import CircularText from "@/components/ReactBits/CircularText";
+import Grainient from "@/components/ReactBits/Grainient";
 
 const instrumentSerif = Instrument_Serif({ weight: "400", subsets: ["latin"] });
 
 export default function SignUp() {
   const router = useRouter();
+
   const [username, setUsername] = useState("");
   const [nickname, setNickname] = useState("");
   const [fullname, setFullname] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  //Username (@-prefix)
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.value;
     if (val.length > 0 && !val.startsWith("@")) val = "@" + val;
@@ -33,11 +34,11 @@ export default function SignUp() {
     setUsername(val);
   };
 
-  // ── Password validation ───────────────────────────────
   const hasCapital = /[A-Z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
   const hasLength = password.length >= 8 && password.length <= 32;
-  const allValid = hasCapital && hasNumber && hasLength;
+  const passwordsMatch = password === confirmPassword;
+  const allValid = hasCapital && hasNumber && hasLength && passwordsMatch;
 
   let pwdColor = "border-transparent";
   if (password.length > 0) {
@@ -52,7 +53,6 @@ export default function SignUp() {
     nickname.length > 0 &&
     fullname.length > 0;
 
-  // ── Submit ────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
@@ -61,7 +61,6 @@ export default function SignUp() {
     setLoading(true);
 
     try {
-      // Strip the leading "@" before sending to API
       const rawUsername = username.startsWith("@")
         ? username.slice(1)
         : username;
@@ -140,7 +139,6 @@ export default function SignUp() {
             onSubmit={handleSubmit}
             className="flex flex-col w-full space-y-4"
           >
-            {/* Full Name */}
             <input
               type="text"
               value={fullname}
@@ -153,7 +151,6 @@ export default function SignUp() {
               }`}
             />
 
-            {/* Nickname */}
             <input
               type="text"
               value={nickname}
@@ -166,7 +163,6 @@ export default function SignUp() {
               }`}
             />
 
-            {/* Username */}
             <input
               type="text"
               value={username}
@@ -179,8 +175,7 @@ export default function SignUp() {
               }`}
             />
 
-            {/* Password */}
-            <div>
+            <div className="space-y-4">
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -208,6 +203,22 @@ export default function SignUp() {
                 )}
               </div>
 
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Passwort bestätigen"
+                  className={`w-full px-5 py-3 rounded-full text-base focus:outline-none transition-colors border placeholder:text-zinc-400 ${
+                    confirmPassword.length !== 0
+                      ? passwordsMatch
+                        ? "bg-green-50 border-green-400 text-green-900"
+                        : "bg-red-50 border-red-400 text-red-900"
+                      : "bg-white border-transparent text-zinc-900 focus:border-zinc-300"
+                  }`}
+                />
+              </div>
+
               <div className="w-full px-2 py-2">
                 <p className="text-zinc-500 text-xs mb-2">
                   Bitte beachte folgende Regeln:
@@ -217,25 +228,37 @@ export default function SignUp() {
                     { ok: hasCapital, label: "mindestens ein Großbuchstabe" },
                     { ok: hasNumber, label: "mindestens eine Zahl" },
                     { ok: hasLength, label: "zwischen 8 und 32 Zeichen" },
+                    {
+                      ok: passwordsMatch && password.length > 0,
+                      label: "Passwörter stimmen überein",
+                    },
                   ].map(({ ok, label }) => (
                     <p
                       key={label}
                       className={
                         ok
                           ? "text-green-600"
-                          : password.length > 0
+                          : password.length > 0 ||
+                              (label === "Passwörter stimmen überein" &&
+                                confirmPassword.length > 0)
                             ? "text-red-500"
                             : "text-zinc-500"
                       }
                     >
-                      {ok ? "✓" : password.length > 0 ? "✗" : "•"} {label}
+                      {ok
+                        ? "✓"
+                        : password.length > 0 ||
+                            (label === "Passwörter stimmen überein" &&
+                              confirmPassword.length > 0)
+                          ? "✗"
+                          : "•"}{" "}
+                      {label}
                     </p>
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* API Error */}
             {error && (
               <p className="text-red-500 text-sm text-center px-2">
                 <DecryptedText
@@ -247,7 +270,6 @@ export default function SignUp() {
               </p>
             )}
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={!canSubmit || loading}

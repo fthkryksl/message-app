@@ -7,16 +7,17 @@ import { ChevronRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { login } from "@/lib/api";
 import { saveToken, saveUserHash } from "@/lib/auth";
-import BlurText from "@/components/BlurText";
-import CircularText from "@/components/CircularText";
-import Grainient from "@/components/Grainient";
-import ShinyText from "@/components/ShinyText";
-import DecryptedText from "@/components/DecryptedText";
+import BlurText from "@/components/ReactBits/BlurText";
+import CircularText from "@/components/ReactBits/CircularText";
+import Grainient from "@/components/ReactBits/Grainient";
+import ShinyText from "@/components/ReactBits/ShinyText";
+import DecryptedText from "@/components/ReactBits/DecryptedText";
 
 const instrumentSerif = Instrument_Serif({ weight: "400", subsets: ["latin"] });
 
 export default function SignIn() {
   const router = useRouter();
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -32,7 +33,6 @@ export default function SignIn() {
 
   const allValid = password.length > 0 && username.length > 1;
 
-  // Submit Logic
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!allValid || loading) return;
@@ -41,7 +41,6 @@ export default function SignIn() {
     setLoading(true);
 
     try {
-      // Strip leading "@" for API
       const rawUserid = username.startsWith("@") ? username.slice(1) : username;
       const { token, hash } = await login(rawUserid, password);
       saveToken(token);
@@ -110,12 +109,10 @@ export default function SignIn() {
             onAnimationComplete={handleAnimationComplete}
             className={`${instrumentSerif.className} text-3xl text-orange-600 text-center mb-8 tracking-[-0.02em]`}
           />
-          {/* Form */}
           <form
             onSubmit={handleSubmit}
             className="flex flex-col w-full space-y-4"
           >
-            {/* Username */}
             <input
               type="text"
               value={username}
@@ -124,7 +121,6 @@ export default function SignIn() {
               className={`w-full px-5 py-3 rounded-full text-base focus:outline-none transition-colors border bg-white border-transparent text-zinc-900 placeholder:text-zinc-400 ${username.length > 0 ? "focus:border-zinc-400" : "focus:border-zinc-300"}`}
             />
 
-            {/* Password */}
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
@@ -148,7 +144,6 @@ export default function SignIn() {
               )}
             </div>
 
-            {/* API Error */}
             {error && (
               <p className="text-red-500 text-sm text-center px-2">
                 <DecryptedText

@@ -20,7 +20,7 @@ import {
   ChatRoom,
 } from "@/lib/api";
 import { getToken, getUserHash } from "@/lib/auth";
-import BlurText from "@/components/BlurText";
+import BlurText from "@/components/ReactBits/BlurText";
 
 const instrumentSerif = Instrument_Serif({ weight: "400", subsets: ["latin"] });
 
@@ -28,10 +28,10 @@ type FilterType = "all" | "persons" | "groups";
 
 export default function SearchPage() {
   const router = useRouter();
+
   const [token, setToken] = useState<string | null>(null);
   const [currentUserHash, setCurrentUserHash] = useState<string | null>(null);
 
-  // States
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [groups, setGroups] = useState<ChatRoom[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -40,7 +40,6 @@ export default function SearchPage() {
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize Auth
   useEffect(() => {
     const t = getToken();
     const hash = getUserHash();
@@ -52,7 +51,6 @@ export default function SearchPage() {
     setCurrentUserHash(hash);
   }, [router]);
 
-  // Fetch Data
   const fetchData = async () => {
     if (!token) return;
     setLoading(true);
@@ -63,7 +61,6 @@ export default function SearchPage() {
       ]);
       setProfiles(allProfiles);
 
-      // We only consider public chats as "Gruppen" for the Empfohlene Gruppen section
       const publicGroups = allChats.filter(
         (chat) => chat.visibility === "public",
       );
@@ -82,7 +79,6 @@ export default function SearchPage() {
     fetchData();
   }, [token]);
 
-  // Actions
   const handleStartChat = async (user: UserProfile) => {
     if (!token) return;
     setActionLoadingId(`user-${user.hash}`);
@@ -122,7 +118,6 @@ export default function SearchPage() {
     }
   };
 
-  // Filtering
   const filteredProfiles = profiles.filter((profile) => {
     if (activeFilter === "groups") return false;
     const isSelf = profile.hash === currentUserHash;
@@ -145,7 +140,6 @@ export default function SearchPage() {
 
   return (
     <div className="w-full h-full bg-slate-950 text-white flex flex-col min-h-screen">
-      {/* Header Area */}
       <div className="sticky top-0 bg-slate-900 border-b border-slate-800 p-4 z-10 shadow-md">
         <div className="flex items-center justify-between mb-4">
           <h1 className={`${instrumentSerif.className} text-2xl font-bold`}>
@@ -169,7 +163,6 @@ export default function SearchPage() {
           </button>
         </div>
 
-        {/* Search Bar */}
         <div className="relative mb-4">
           <SearchIcon
             size={18}
@@ -184,7 +177,6 @@ export default function SearchPage() {
           />
         </div>
 
-        {/* Filter Pills */}
         <div className="flex gap-2">
           <button
             onClick={() => setActiveFilter("all")}
@@ -219,7 +211,6 @@ export default function SearchPage() {
         </div>
       </div>
 
-      {/* Content Area */}
       <div className="flex-1 overflow-y-auto p-4 pb-24">
         {error && (
           <div className="mb-4 p-3 bg-red-950/60 border border-red-900 rounded-xl text-red-300 text-xs flex items-center gap-2">
@@ -235,7 +226,6 @@ export default function SearchPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Empfohlene Gruppen */}
             {showGroups && (filteredGroups.length > 0 || searchTerm) && (
               <section>
                 <h2
@@ -290,7 +280,6 @@ export default function SearchPage() {
               </section>
             )}
 
-            {/* Personen die kennen könntest */}
             {showPersons && (filteredProfiles.length > 0 || searchTerm) && (
               <section>
                 <h2

@@ -14,7 +14,6 @@ import {
   Check,
   Users,
   Lock,
-  LogOut,
 } from "lucide-react";
 import {
   getChats,
@@ -27,15 +26,15 @@ import {
   getMessages,
 } from "@/lib/api";
 import { getToken, getUserHash } from "@/lib/auth";
-import BlurText from "@/components/BlurText";
+import BlurText from "@/components/ReactBits/BlurText";
 
 const instrumentSerif = Instrument_Serif({ weight: "400", subsets: ["latin"] });
 
 export default function MessagesPage() {
   const router = useRouter();
+
   const [token, setToken] = useState<string | null>(null);
 
-  // States
   const [chats, setChats] = useState<ChatRoom[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -44,13 +43,11 @@ export default function MessagesPage() {
   const [currentUserHash, setCurrentUserHash] = useState<string | null>(null);
   const [contactNames, setContactNames] = useState<Record<number, string>>({});
 
-  // Create Chat Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newChatName, setNewChatName] = useState("");
   const [newChatIsPublic, setNewChatIsPublic] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  // Initialize
   useEffect(() => {
     const t = getToken();
     const hash = getUserHash();
@@ -62,7 +59,6 @@ export default function MessagesPage() {
     setCurrentUserHash(hash);
   }, [router]);
 
-  // Fetch Data
   const fetchData = async () => {
     if (!token) return;
     try {
@@ -74,14 +70,11 @@ export default function MessagesPage() {
       setInvites(pendingInvites);
       setError(null);
 
-      // Lazily fetch contact names for private chats
       joinedChats.forEach((chat) => {
         if (chat.visibility === "private") {
-          // Check if we already have a name (either actual or fallback)
           setContactNames((prev) => {
             if (prev[chat.chatid]) return prev;
 
-            // If not, fetch it.
             getMessages(token, chat.chatid)
               .then((msgs) => {
                 const otherUserMsg = msgs.find(
@@ -95,20 +88,17 @@ export default function MessagesPage() {
                 }));
               })
               .catch(() => {
-                // On error (e.g. 403), set a fallback so we don't spam requests
                 setContactNames((current) => ({
                   ...current,
                   [chat.chatid]: chat.chatname,
                 }));
               });
 
-            // Return unchanged for now, the promise will update it later
             return prev;
           });
         }
       });
     } catch (err: any) {
-      // Wir verzichten hier auf console.error, damit der Next.js Error-Overlay nicht bei jedem Polling-Fehler aufploppt
       setError("Daten konnten nicht aktualisiert werden.");
     } finally {
       setLoading(false);
@@ -119,12 +109,10 @@ export default function MessagesPage() {
     if (!token) return;
     fetchData();
 
-    // Auto-poll overview lists every 8 seconds
     const interval = setInterval(fetchData, 8000);
     return () => clearInterval(interval);
   }, [token]);
 
-  // Join Invite Handler
   const handleAcceptInvite = async (chatid: number) => {
     if (!token) return;
     try {
@@ -136,7 +124,6 @@ export default function MessagesPage() {
     }
   };
 
-  // Decline Invite Handler
   const handleDeclineInvite = async (chatid: number) => {
     if (!token) return;
     const confirm = window.confirm(
@@ -151,7 +138,6 @@ export default function MessagesPage() {
     }
   };
 
-  // Create Chat Submit
   const handleCreateChat = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token || !newChatName.trim()) return;
@@ -167,7 +153,6 @@ export default function MessagesPage() {
       setShowCreateModal(false);
       setNewChatName("");
       setNewChatIsPublic(false);
-      // Navigate straight to the new chat
       router.push(`/messages/${chatid}`);
     } catch (err: any) {
       setError(err.message ?? "Fehler beim Erstellen des Chats.");
@@ -176,14 +161,12 @@ export default function MessagesPage() {
     }
   };
 
-  // Filtered chats list
   const filteredChats = chats.filter((chat) =>
     chat.chatname.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
     <div className="w-full h-full bg-slate-950 text-white flex flex-col min-h-screen">
-      {/* Header */}
       <div className="sticky top-0 bg-slate-900 border-b border-slate-800 p-4 z-10 shadow-md">
         <div className="flex items-center justify-between mb-4">
           <h1 className={`${instrumentSerif.className} text-2xl font-bold`}>
@@ -219,7 +202,6 @@ export default function MessagesPage() {
           </div>
         </div>
 
-        {/* Search Bar */}
         <div className="relative">
           <SearchIcon
             size={18}
@@ -235,7 +217,6 @@ export default function MessagesPage() {
         </div>
       </div>
 
-      {/* Content Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {error && (
           <div className="p-3 bg-red-950/60 border border-red-900 rounded-xl text-red-300 text-xs flex items-center gap-2">
@@ -244,7 +225,6 @@ export default function MessagesPage() {
           </div>
         )}
 
-        {/* Pending Invites Banner */}
         {invites.length > 0 && (
           <div className="bg-slate-900 border border-orange-500/30 rounded-2xl p-4 shadow-xl space-y-3">
             <h3 className="text-sm font-semibold text-orange-500 flex items-center gap-1.5">
@@ -286,7 +266,6 @@ export default function MessagesPage() {
           </div>
         )}
 
-        {/* Chats List */}
         <div className="space-y-2">
           {loading ? (
             <div className="p-8 text-center text-slate-500 flex flex-col items-center justify-center gap-2">
@@ -351,7 +330,6 @@ export default function MessagesPage() {
         </div>
       </div>
 
-      {/* Create Chat Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-40 animate-in fade-in duration-200">
           <div className="w-full max-w-sm bg-slate-900 border border-slate-850 rounded-2xl shadow-2xl p-5 relative">
