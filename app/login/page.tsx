@@ -111,7 +111,7 @@ export default function SignIn() {
           />
           <form
             onSubmit={handleSubmit}
-            className="flex flex-col w-full space-y-4"
+            className="flex flex-col w-[90%] space-y-4"
           >
             <input
               type="text"

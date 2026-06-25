@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter_Tight, Geist } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,10 @@ const interTight = Inter_Tight({
 export const metadata: Metadata = {
   title: "Talks – Nachrichten App",
   description: "Willkommen bei Talks",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({
