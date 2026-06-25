@@ -17,7 +17,7 @@ export default function ProfilePage() {
   const [loadingLogout, setLoadingLogout] = useState(false);
   const [loadingDeregister, setLoadingDeregister] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
 
@@ -29,10 +29,10 @@ export default function ProfilePage() {
         router.push("/login");
         return;
       }
-      
+
       try {
         const profiles = await getProfiles(token);
-        const myProfile = profiles.find(p => p.hash === hash);
+        const myProfile = profiles.find((p) => p.hash === hash);
         if (myProfile) {
           setProfile(myProfile);
         }
@@ -42,7 +42,7 @@ export default function ProfilePage() {
         setLoadingProfile(false);
       }
     };
-    
+
     fetchProfile();
   }, [router]);
 
@@ -58,7 +58,7 @@ export default function ProfilePage() {
       await logout(token);
       router.push("/login");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Logout failed.");
+      setError(err instanceof Error ? err.message : "Abmelden fehlgeschlagen.");
     } finally {
       setLoadingLogout(false);
     }
@@ -71,7 +71,7 @@ export default function ProfilePage() {
       return;
     }
     const confirmed = globalThis.confirm(
-      "Bist du sicher, dass du dein Konto permanent löschen möchtest? Das kann nicht rückgängig gemacht werden."
+      "Bist du sicher, dass du dein Konto permanent löschen möchtest? Das kann nicht rückgängig gemacht werden.",
     );
     if (!confirmed) return;
 
@@ -81,14 +81,21 @@ export default function ProfilePage() {
       await deregister(token);
       router.push("/login");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Deregistration failed.");
+      setError(
+        err instanceof Error ? err.message : "Konto löschen fehlgeschlagen.",
+      );
     } finally {
       setLoadingDeregister(false);
     }
   };
 
   const getAvatarColor = (name: string) => {
-    const colors = ["from-orange-500 to-red-500", "from-blue-500 to-cyan-500", "from-emerald-500 to-teal-500", "from-purple-500 to-pink-500"];
+    const colors = [
+      "from-orange-500 to-red-500",
+      "from-blue-500 to-cyan-500",
+      "from-emerald-500 to-teal-500",
+      "from-purple-500 to-pink-500",
+    ];
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
       hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -118,21 +125,29 @@ export default function ProfilePage() {
         <div className="flex flex-col items-center justify-center p-8 border-b border-slate-700">
           {!loadingProfile && profile ? (
             <>
-              <div className={`w-28 h-28 rounded-full mb-4 flex items-center justify-center text-4xl font-bold bg-gradient-to-br ${getAvatarColor(profile.nickname)} shadow-lg shadow-black/50 border-4 border-slate-900`}>
+              <div
+                className={`w-28 h-28 rounded-full mb-4 flex items-center justify-center text-4xl font-bold bg-gradient-to-br ${getAvatarColor(profile.nickname)} shadow-lg shadow-black/50 border-4 border-slate-900`}
+              >
                 {profile.nickname.substring(0, 2).toUpperCase()}
               </div>
-              <h2 className="text-2xl font-bold text-slate-100">{profile.nickname}</h2>
-              {profile.fullname && <p className="text-slate-400 mt-1">{profile.fullname}</p>}
+              <h2 className="text-2xl font-bold text-slate-100">
+                {profile.nickname}
+              </h2>
+              {profile.fullname && (
+                <p className="text-slate-400 mt-1">{profile.fullname}</p>
+              )}
               <div className="mt-4 bg-slate-900 px-4 py-2 rounded-lg border border-slate-800 flex items-center gap-2">
                 <span className="text-xs text-slate-500">Hash:</span>
-                <span className="text-sm font-mono text-orange-400">{profile.hash}</span>
+                <span className="text-sm font-mono text-orange-400">
+                  {profile.hash}
+                </span>
               </div>
             </>
           ) : (
-             <div className="flex flex-col items-center">
-               <div className="w-28 h-28 rounded-full bg-slate-800 animate-pulse mb-4"></div>
-               <div className="w-32 h-6 bg-slate-800 animate-pulse rounded"></div>
-             </div>
+            <div className="flex flex-col items-center">
+              <div className="w-28 h-28 rounded-full bg-slate-800 animate-pulse mb-4"></div>
+              <div className="w-32 h-6 bg-slate-800 animate-pulse rounded"></div>
+            </div>
           )}
         </div>
 
@@ -163,7 +178,13 @@ export default function ProfilePage() {
               <LogOut size={18} />
               <span>
                 {loadingLogout ? (
-                  <ShinyText text="Abmelden..." disabled={false} speed={2} className="text-slate-400" shineColor="#ffffff" />
+                  <ShinyText
+                    text="Abmelden..."
+                    disabled={false}
+                    speed={2}
+                    className="text-slate-400"
+                    shineColor="#ffffff"
+                  />
                 ) : (
                   "Abmelden"
                 )}
@@ -188,7 +209,13 @@ export default function ProfilePage() {
               <UserX size={18} />
               <span>
                 {loadingDeregister ? (
-                  <ShinyText text="Konto wird gelöscht..." disabled={false} speed={2} className="text-red-300" shineColor="#ffffff" />
+                  <ShinyText
+                    text="Konto wird gelöscht..."
+                    disabled={false}
+                    speed={2}
+                    className="text-red-300"
+                    shineColor="#ffffff"
+                  />
                 ) : (
                   "Konto löschen"
                 )}

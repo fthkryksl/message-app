@@ -1,8 +1,8 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Sign Up",
-  description: "Sign up to Talks",
+  title: "Talks - Registrieren",
+  description: "Registrieren bei Talks",
 };
 
 export default function LoginLayout({

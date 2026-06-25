@@ -3,8 +3,22 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Instrument_Serif } from "next/font/google";
-import { Search as SearchIcon, RefreshCw, AlertCircle, MessageSquarePlus, ArrowRight } from "lucide-react";
-import { getProfiles, getChats, createChat, inviteUser, joinChat, UserProfile, ChatRoom } from "@/lib/api";
+import {
+  Search as SearchIcon,
+  RefreshCw,
+  AlertCircle,
+  MessageSquarePlus,
+  ArrowRight,
+} from "lucide-react";
+import {
+  getProfiles,
+  getChats,
+  createChat,
+  inviteUser,
+  joinChat,
+  UserProfile,
+  ChatRoom,
+} from "@/lib/api";
 import { getToken, getUserHash } from "@/lib/auth";
 import BlurText from "@/components/BlurText";
 
@@ -45,12 +59,14 @@ export default function SearchPage() {
     try {
       const [allProfiles, allChats] = await Promise.all([
         getProfiles(token),
-        getChats(token)
+        getChats(token),
       ]);
       setProfiles(allProfiles);
-      
+
       // We only consider public chats as "Gruppen" for the Empfohlene Gruppen section
-      const publicGroups = allChats.filter(chat => chat.visibility === "public");
+      const publicGroups = allChats.filter(
+        (chat) => chat.visibility === "public",
+      );
       setGroups(publicGroups);
       setError(null);
     } catch (err: any) {
@@ -79,7 +95,9 @@ export default function SearchPage() {
       router.push(`/messages/${chatid}`);
     } catch (err: any) {
       console.error(err);
-      setError(err.message ?? `Kanalerstellung mit ${user.nickname} fehlgeschlagen.`);
+      setError(
+        err.message ?? `Kanalerstellung mit ${user.nickname} fehlgeschlagen.`,
+      );
       setActionLoadingId(null);
     }
   };
@@ -105,16 +123,20 @@ export default function SearchPage() {
   };
 
   // Filtering
-  const filteredProfiles = profiles.filter(profile => {
+  const filteredProfiles = profiles.filter((profile) => {
     if (activeFilter === "groups") return false;
     const isSelf = profile.hash === currentUserHash;
-    const matchesSearch = profile.nickname.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = profile.nickname
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
     return !isSelf && matchesSearch;
   });
 
-  const filteredGroups = groups.filter(group => {
+  const filteredGroups = groups.filter((group) => {
     if (activeFilter === "persons") return false;
-    const matchesSearch = group.chatname.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = group.chatname
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 
@@ -140,13 +162,19 @@ export default function SearchPage() {
             className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
             title="Aktualisieren"
           >
-            <RefreshCw size={20} className={loading ? "animate-spin text-orange-500" : ""} />
+            <RefreshCw
+              size={20}
+              className={loading ? "animate-spin text-orange-500" : ""}
+            />
           </button>
         </div>
 
         {/* Search Bar */}
         <div className="relative mb-4">
-          <SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <SearchIcon
+            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          />
           <input
             type="text"
             placeholder="Personen oder Gruppen suchen..."
@@ -161,8 +189,8 @@ export default function SearchPage() {
           <button
             onClick={() => setActiveFilter("all")}
             className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
-              activeFilter === "all" 
-                ? "bg-orange-600 text-white" 
+              activeFilter === "all"
+                ? "bg-orange-600 text-white"
                 : "bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
             }`}
           >
@@ -171,8 +199,8 @@ export default function SearchPage() {
           <button
             onClick={() => setActiveFilter("persons")}
             className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
-              activeFilter === "persons" 
-                ? "bg-orange-600 text-white" 
+              activeFilter === "persons"
+                ? "bg-orange-600 text-white"
                 : "bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
             }`}
           >
@@ -181,8 +209,8 @@ export default function SearchPage() {
           <button
             onClick={() => setActiveFilter("groups")}
             className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
-              activeFilter === "groups" 
-                ? "bg-orange-600 text-white" 
+              activeFilter === "groups"
+                ? "bg-orange-600 text-white"
                 : "bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
             }`}
           >
@@ -210,7 +238,9 @@ export default function SearchPage() {
             {/* Empfohlene Gruppen */}
             {showGroups && (filteredGroups.length > 0 || searchTerm) && (
               <section>
-                <h2 className={`${instrumentSerif.className} text-xl text-slate-200 mb-3 px-1`}>
+                <h2
+                  className={`${instrumentSerif.className} text-xl text-slate-200 mb-3 px-1`}
+                >
                   Empfohlene Gruppen
                 </h2>
                 <div className="space-y-2">
@@ -221,14 +251,16 @@ export default function SearchPage() {
                         onClick={() => {
                           if (actionLoadingId === null) handleJoinGroup(group);
                         }}
-                        className={`p-4 bg-slate-900 border border-slate-850 hover:border-slate-800 transition-all rounded-2xl flex items-center justify-between gap-4 shadow-sm cursor-pointer ${actionLoadingId !== null ? 'opacity-50 pointer-events-none' : ''}`}
+                        className={`p-4 bg-slate-900 border border-slate-850 hover:border-slate-800 transition-all rounded-2xl flex items-center justify-between gap-4 shadow-sm cursor-pointer ${actionLoadingId !== null ? "opacity-50 pointer-events-none" : ""}`}
                       >
                         <div className="flex items-center gap-3.5 min-w-0">
                           <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-base shadow-inner text-white select-none shrink-0">
                             {group.chatname.substring(0, 2).toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <h3 className="font-semibold text-slate-200 truncate">{group.chatname}</h3>
+                            <h3 className="font-semibold text-slate-200 truncate">
+                              {group.chatname}
+                            </h3>
                             <p className="text-xs text-slate-400 mt-0.5 truncate font-medium">
                               ID: {group.chatid}
                             </p>
@@ -237,7 +269,10 @@ export default function SearchPage() {
 
                         <div className="shrink-0 flex items-center">
                           {actionLoadingId === `group-${group.chatid}` ? (
-                            <RefreshCw size={16} className="animate-spin text-orange-500" />
+                            <RefreshCw
+                              size={16}
+                              className="animate-spin text-orange-500"
+                            />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400">
                               <ArrowRight size={14} />
@@ -247,7 +282,9 @@ export default function SearchPage() {
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-slate-500 px-1">Keine passenden Gruppen gefunden.</p>
+                    <p className="text-sm text-slate-500 px-1">
+                      Keine passenden Gruppen gefunden.
+                    </p>
                   )}
                 </div>
               </section>
@@ -256,7 +293,9 @@ export default function SearchPage() {
             {/* Personen die kennen könntest */}
             {showPersons && (filteredProfiles.length > 0 || searchTerm) && (
               <section>
-                <h2 className={`${instrumentSerif.className} text-xl text-slate-200 mb-3 px-1`}>
+                <h2
+                  className={`${instrumentSerif.className} text-xl text-slate-200 mb-3 px-1`}
+                >
                   Personen die kennen könntest
                 </h2>
                 <div className="space-y-2">
@@ -267,14 +306,16 @@ export default function SearchPage() {
                         onClick={() => {
                           if (actionLoadingId === null) handleStartChat(user);
                         }}
-                        className={`p-4 bg-slate-900 border border-slate-850 hover:border-slate-800 transition-all rounded-2xl flex items-center justify-between gap-4 shadow-sm cursor-pointer ${actionLoadingId !== null ? 'opacity-50 pointer-events-none' : ''}`}
+                        className={`p-4 bg-slate-900 border border-slate-850 hover:border-slate-800 transition-all rounded-2xl flex items-center justify-between gap-4 shadow-sm cursor-pointer ${actionLoadingId !== null ? "opacity-50 pointer-events-none" : ""}`}
                       >
                         <div className="flex items-center gap-3.5 min-w-0">
                           <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-pink-500 to-rose-600 flex items-center justify-center font-bold text-base shadow-inner text-white select-none shrink-0">
                             {user.nickname.substring(0, 2).toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <h3 className="font-semibold text-slate-200 truncate">@{user.nickname}</h3>
+                            <h3 className="font-semibold text-slate-200 truncate">
+                              @{user.nickname}
+                            </h3>
                             <p className="text-xs text-slate-400 mt-0.5 truncate font-medium">
                               Hash: {user.hash}
                             </p>
@@ -283,7 +324,10 @@ export default function SearchPage() {
 
                         <div className="shrink-0 flex items-center">
                           {actionLoadingId === `user-${user.hash}` ? (
-                            <RefreshCw size={16} className="animate-spin text-orange-500" />
+                            <RefreshCw
+                              size={16}
+                              className="animate-spin text-orange-500"
+                            />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400">
                               <MessageSquarePlus size={14} />
@@ -293,19 +337,30 @@ export default function SearchPage() {
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-slate-500 px-1">Keine passenden Personen gefunden.</p>
+                    <p className="text-sm text-slate-500 px-1">
+                      Keine passenden Personen gefunden.
+                    </p>
                   )}
                 </div>
               </section>
             )}
 
-            {!loading && filteredGroups.length === 0 && filteredProfiles.length === 0 && (
-              <div className="p-12 text-center text-slate-500 mt-10 bg-slate-900/40 rounded-3xl border border-slate-900/60">
-                <SearchIcon size={32} className="mx-auto text-slate-650 mb-2" />
-                <p className="text-sm font-semibold text-slate-400">Keine Ergebnisse gefunden</p>
-                <p className="text-xs text-slate-500 mt-1">Versuche es mit einem anderen Suchbegriff.</p>
-              </div>
-            )}
+            {!loading &&
+              filteredGroups.length === 0 &&
+              filteredProfiles.length === 0 && (
+                <div className="p-12 text-center text-slate-500 mt-10 bg-slate-900/40 rounded-3xl border border-slate-900/60">
+                  <SearchIcon
+                    size={32}
+                    className="mx-auto text-slate-650 mb-2"
+                  />
+                  <p className="text-sm font-semibold text-slate-400">
+                    Keine Ergebnisse gefunden
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Versuche es mit einem anderen Suchbegriff.
+                  </p>
+                </div>
+              )}
           </div>
         )}
       </div>

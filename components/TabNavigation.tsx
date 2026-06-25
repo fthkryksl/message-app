@@ -24,7 +24,8 @@ export default function TabNavigation() {
       <div className="flex justify-around items-center h-20">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = pathname === tab.path || pathname.startsWith(tab.path + "/");
+          const isActive =
+            pathname === tab.path || pathname.startsWith(tab.path + "/");
 
           return (
             <button
@@ -34,7 +35,7 @@ export default function TabNavigation() {
                 "flex flex-col items-center justify-center w-full h-full gap-1 transition-colors",
                 isActive
                   ? "text-orange-500"
-                  : "text-slate-400 hover:text-slate-300"
+                  : "text-slate-400 hover:text-slate-300",
               )}
               aria-label={tab.name}
             >

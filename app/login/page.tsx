@@ -25,12 +25,8 @@ export default function SignIn() {
 
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.value;
-    if (val.length > 0 && !val.startsWith("@")) {
-      val = "@" + val;
-    }
-    if (username === "@" && val.length <= 1) {
-      val = "";
-    }
+    if (val.length > 0 && !val.startsWith("@")) val = "@" + val;
+    if (username === "@" && val.length <= 1) val = "";
     setUsername(val);
   };
 
@@ -55,7 +51,7 @@ export default function SignIn() {
       setError(
         err instanceof Error
           ? err.message
-          : "Login failed. Please check your credentials.",
+          : "Anmeldung fehlgeschlagen. Bitte überprüfe deine Zugangsdaten.",
       );
     } finally {
       setLoading(false);
@@ -88,7 +84,7 @@ export default function SignIn() {
             grainScale={1.3}
             grainAnimated
             contrast={1.5}
-            gamma={1}
+            gamma={2}
             saturation={1}
             centerX={0}
             centerY={0}
@@ -107,7 +103,7 @@ export default function SignIn() {
 
         <main className="relative z-10 flex flex-col items-center w-full max-w-sm">
           <BlurText
-            text="Login"
+            text="Anmelden"
             delay={50}
             animateBy="letters"
             direction="top"
@@ -134,7 +130,7 @@ export default function SignIn() {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="password"
+                placeholder="Passwort"
                 className={`w-full px-5 py-3 rounded-full text-base focus:outline-none transition-colors border bg-white border-transparent text-zinc-900 placeholder:text-zinc-400 ${password.length > 0 ? "focus:border-zinc-400" : "focus:border-zinc-300"}`}
               />
               {password.length > 0 && (
@@ -177,14 +173,14 @@ export default function SignIn() {
               <span>
                 {loading ? (
                   <ShinyText
-                    text="Loading"
+                    text="Laden..."
                     disabled={false}
                     speed={2}
                     className="text-zinc-500"
                     shineColor="#ffffff"
                   />
                 ) : (
-                  "Login"
+                  "Anmelden"
                 )}
               </span>
               <ChevronRight
@@ -196,7 +192,7 @@ export default function SignIn() {
               href="/signup"
               className="w-full mt-2 flex items-center justify-center text-sm text-zinc-500 hover:text-zinc-900 transition-colors hover:underline"
             >
-              I don't have an account
+              Ich habe noch kein Konto
             </Link>
           </form>
         </main>

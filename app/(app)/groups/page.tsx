@@ -3,8 +3,27 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Instrument_Serif } from "next/font/google";
-import { Plus, Search as SearchIcon, Users, Lock, LogOut, Check, ArrowRight, RefreshCw, AlertCircle, Trash2, X } from "lucide-react";
-import { getChats, createChat, joinChat, leaveChat, deleteChat, ChatRoom } from "@/lib/api";
+import {
+  Plus,
+  Search as SearchIcon,
+  Users,
+  Lock,
+  LogOut,
+  Check,
+  ArrowRight,
+  RefreshCw,
+  AlertCircle,
+  Trash2,
+  X,
+} from "lucide-react";
+import {
+  getChats,
+  createChat,
+  joinChat,
+  leaveChat,
+  deleteChat,
+  ChatRoom,
+} from "@/lib/api";
 import { getToken } from "@/lib/auth";
 import BlurText from "@/components/BlurText";
 
@@ -54,7 +73,7 @@ export default function GroupsPage() {
   useEffect(() => {
     if (!token) return;
     fetchGroups();
-    
+
     // Auto-poll groups list every 10 seconds
     const interval = setInterval(fetchGroups, 10000);
     return () => clearInterval(interval);
@@ -77,7 +96,9 @@ export default function GroupsPage() {
   // Leave Chat
   const handleLeaveChat = async (chatid: number) => {
     if (!token) return;
-    const confirm = window.confirm("Möchtest du diese Gruppe wirklich verlassen?");
+    const confirm = window.confirm(
+      "Möchtest du diese Gruppe wirklich verlassen?",
+    );
     if (!confirm) return;
 
     setLoading(true);
@@ -93,7 +114,9 @@ export default function GroupsPage() {
   // Delete Chat
   const handleDeleteChat = async (chatid: number) => {
     if (!token) return;
-    const confirm = window.confirm("Möchtest du diese Gruppe wirklich unwiderruflich LÖSCHEN?");
+    const confirm = window.confirm(
+      "Möchtest du diese Gruppe wirklich unwiderruflich LÖSCHEN?",
+    );
     if (!confirm) return;
 
     setLoading(true);
@@ -114,7 +137,11 @@ export default function GroupsPage() {
     setCreating(true);
     setError(null);
     try {
-      const chatid = await createChat(token, newChatName.trim(), newChatIsPublic);
+      const chatid = await createChat(
+        token,
+        newChatName.trim(),
+        newChatIsPublic,
+      );
       setShowCreateModal(false);
       setNewChatName("");
       setNewChatIsPublic(false);
@@ -128,8 +155,8 @@ export default function GroupsPage() {
   };
 
   // Filter groups based on search term
-  const filteredGroups = groups.filter(group =>
-    group.chatname.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredGroups = groups.filter((group) =>
+    group.chatname.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
@@ -155,7 +182,10 @@ export default function GroupsPage() {
               className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
               title="Aktualisieren"
             >
-              <RefreshCw size={20} className={loading ? "animate-spin text-orange-500" : ""} />
+              <RefreshCw
+                size={20}
+                className={loading ? "animate-spin text-orange-500" : ""}
+              />
             </button>
             <button
               onClick={() => setShowCreateModal(true)}
@@ -169,7 +199,10 @@ export default function GroupsPage() {
 
         {/* Search Bar */}
         <div className="relative">
-          <SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <SearchIcon
+            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          />
           <input
             type="text"
             placeholder="Gruppen suchen..."
@@ -206,10 +239,17 @@ export default function GroupsPage() {
                     {group.chatname.substring(0, 2).toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-slate-200 truncate">{group.chatname}</h3>
+                    <h3 className="font-semibold text-slate-200 truncate">
+                      {group.chatname}
+                    </h3>
                     <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5 font-medium">
-                      {group.visibility === "public" ? <Users size={12} /> : <Lock size={12} />}
-                      {group.visibility === "public" ? "Öffentlich" : "Privat"} • ID: {group.chatid}
+                      {group.visibility === "public" ? (
+                        <Users size={12} />
+                      ) : (
+                        <Lock size={12} />
+                      )}
+                      {group.visibility === "public" ? "Öffentlich" : "Privat"}{" "}
+                      • ID: {group.chatid}
                     </p>
                     {group.joined && (
                       <span className="inline-block mt-1 text-[9px] bg-emerald-950 text-emerald-400 px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">
@@ -262,9 +302,12 @@ export default function GroupsPage() {
           ) : (
             <div className="p-12 text-center text-slate-500 bg-slate-900/40 rounded-3xl border border-slate-900/60">
               <Users size={32} className="mx-auto text-slate-650 mb-2" />
-              <p className="text-sm font-semibold text-slate-400 font-medium">Keine Gruppen gefunden</p>
+              <p className="text-sm font-semibold text-slate-400 font-medium">
+                Keine Gruppen gefunden
+              </p>
               <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                Erstelle eine neue Gruppe oder trete einer der öffentlichen Gruppen in der Liste bei.
+                Erstelle eine neue Gruppe oder trete einer der öffentlichen
+                Gruppen in der Liste bei.
               </p>
             </div>
           )}
@@ -289,7 +332,10 @@ export default function GroupsPage() {
 
             <form onSubmit={handleCreateChat} className="space-y-4">
               <div>
-                <label htmlFor="groupname" className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                <label
+                  htmlFor="groupname"
+                  className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5"
+                >
                   Gruppenname
                 </label>
                 <input
@@ -305,8 +351,12 @@ export default function GroupsPage() {
 
               <div className="flex items-center justify-between py-1 border-t border-b border-slate-800">
                 <div>
-                  <span className="text-xs font-semibold text-slate-200 block">Öffentliche Gruppe</span>
-                  <span className="text-[10px] text-slate-500 block">Jeder kann dieser Gruppe suchen und beitreten</span>
+                  <span className="text-xs font-semibold text-slate-200 block">
+                    Öffentliche Gruppe
+                  </span>
+                  <span className="text-[10px] text-slate-500 block">
+                    Jeder kann dieser Gruppe suchen und beitreten
+                  </span>
                 </div>
                 <input
                   type="checkbox"

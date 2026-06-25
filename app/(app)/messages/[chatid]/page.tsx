@@ -19,9 +19,20 @@ import {
   DoorOpen,
   UserPlus,
   Compass,
-  AlertCircle
+  AlertCircle,
 } from "lucide-react";
-import { getMessages, postMessage, getChats, deleteChat, leaveChat, inviteUser, getProfiles, ChatMessage, ChatRoom, UserProfile } from "@/lib/api";
+import {
+  getMessages,
+  postMessage,
+  getChats,
+  deleteChat,
+  leaveChat,
+  inviteUser,
+  getProfiles,
+  ChatMessage,
+  ChatRoom,
+  UserProfile,
+} from "@/lib/api";
 import { getToken, getUserHash } from "@/lib/auth";
 import BlurText from "@/components/BlurText";
 import DecryptedText from "@/components/DecryptedText";
@@ -52,8 +63,15 @@ export default function ChatRoomPage({ params }: PageProps) {
   // Input & Draft States
   const [draftText, setDraftText] = useState("");
   const [draftPhoto, setDraftPhoto] = useState<string | null>(null);
-  const [draftFile, setDraftFile] = useState<{ name: string; type: string; dataUrl: string } | null>(null);
-  const [draftLocation, setDraftLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [draftFile, setDraftFile] = useState<{
+    name: string;
+    type: string;
+    dataUrl: string;
+  } | null>(null);
+  const [draftLocation, setDraftLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [importantFlag, setImportantFlag] = useState(false);
 
@@ -105,7 +123,7 @@ export default function ChatRoomPage({ params }: PageProps) {
     const fetchMetadata = async () => {
       try {
         const chats = await getChats(token);
-        const currentChat = chats.find(c => c.chatid === chatid);
+        const currentChat = chats.find((c) => c.chatid === chatid);
         if (currentChat) {
           setChatRoom(currentChat);
         }
@@ -171,13 +189,13 @@ export default function ChatRoomPage({ params }: PageProps) {
           ? replyingTo.text.startsWith("[FILE:")
             ? "[Datei-Anhang]"
             : replyingTo.text.length > 40
-            ? replyingTo.text.substring(0, 40) + "..."
-            : replyingTo.text
+              ? replyingTo.text.substring(0, 40) + "..."
+              : replyingTo.text
           : replyingTo.photoid
-          ? "[Bild]"
-          : replyingTo.position
-          ? "[Standort]"
-          : "[Anhang]";
+            ? "[Bild]"
+            : replyingTo.position
+              ? "[Standort]"
+              : "[Anhang]";
         finalAddressText = `» ${replyingTo.usernick}: ${snippet}\n\n${finalAddressText}`;
       }
 
@@ -188,7 +206,7 @@ export default function ChatRoomPage({ params }: PageProps) {
 
       const params: any = {
         chatid,
-        important: importantFlag
+        important: importantFlag,
       };
 
       if (finalAddressText) params.text = finalAddressText;
@@ -223,7 +241,7 @@ export default function ChatRoomPage({ params }: PageProps) {
       setCameraActive(true);
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: 640, height: 480, facingMode: "user" },
-        audio: false
+        audio: false,
       });
       setCameraStream(stream);
       if (videoRef.current) {
@@ -231,14 +249,16 @@ export default function ChatRoomPage({ params }: PageProps) {
       }
     } catch (err) {
       console.error(err);
-      setError("Kamera konnte nicht gestartet werden. Bitte Berechtigungen prüfen.");
+      setError(
+        "Kamera konnte nicht gestartet werden. Bitte Berechtigungen prüfen.",
+      );
       setCameraActive(false);
     }
   };
 
   const stopCamera = () => {
     if (cameraStream) {
-      cameraStream.getTracks().forEach(track => track.stop());
+      cameraStream.getTracks().forEach((track) => track.stop());
     }
     setCameraStream(null);
     setCameraActive(false);
@@ -271,7 +291,7 @@ export default function ChatRoomPage({ params }: PageProps) {
       (pos) => {
         setDraftLocation({
           lat: pos.coords.latitude,
-          lng: pos.coords.longitude
+          lng: pos.coords.longitude,
         });
         setGettingLocation(false);
       },
@@ -280,7 +300,7 @@ export default function ChatRoomPage({ params }: PageProps) {
         setError("Standort konnte nicht ausgelesen werden. GPS aktiviert?");
         setGettingLocation(false);
       },
-      { enableHighAccuracy: true, timeout: 8000 }
+      { enableHighAccuracy: true, timeout: 8000 },
     );
   };
 
@@ -328,14 +348,19 @@ export default function ChatRoomPage({ params }: PageProps) {
           }
         };
         img.src = result;
-      } else if (file.type.startsWith("video/") || file.type === "application/pdf") {
+      } else if (
+        file.type.startsWith("video/") ||
+        file.type === "application/pdf"
+      ) {
         setDraftFile({
           name: file.name,
           type: file.type,
-          dataUrl: result
+          dataUrl: result,
         });
       } else {
-        setError("Nicht unterstütztes Dateiformat. Bitte Bilder, Videos oder PDFs wählen.");
+        setError(
+          "Nicht unterstütztes Dateiformat. Bitte Bilder, Videos oder PDFs wählen.",
+        );
       }
     };
     reader.readAsDataURL(file);
@@ -344,7 +369,9 @@ export default function ChatRoomPage({ params }: PageProps) {
   // 9. Leave & Delete Chat Logic
   const handleLeaveChat = async () => {
     if (!token) return;
-    const confirm = window.confirm("Möchtest du diese Gruppe wirklich verlassen?");
+    const confirm = window.confirm(
+      "Möchtest du diese Gruppe wirklich verlassen?",
+    );
     if (!confirm) return;
 
     try {
@@ -357,7 +384,9 @@ export default function ChatRoomPage({ params }: PageProps) {
 
   const handleDeleteChat = async () => {
     if (!token) return;
-    const confirm = window.confirm("Möchtest du diese Gruppe permanent LÖSCHEN?");
+    const confirm = window.confirm(
+      "Möchtest du diese Gruppe permanent LÖSCHEN?",
+    );
     if (!confirm) return;
 
     try {
@@ -406,7 +435,7 @@ export default function ChatRoomPage({ params }: PageProps) {
       isReply: true,
       senderNick: match[1],
       snippet: match[2],
-      cleanText: match[3]
+      cleanText: match[3],
     };
   };
 
@@ -417,7 +446,7 @@ export default function ChatRoomPage({ params }: PageProps) {
     return {
       name: match[1],
       type: match[2],
-      dataUrl: match[3]
+      dataUrl: match[3],
     };
   };
 
@@ -443,9 +472,10 @@ export default function ChatRoomPage({ params }: PageProps) {
     });
   };
 
-  const filteredInvitableUsers = profiles.filter(p =>
-    p.nickname.toLowerCase().includes(inviteSearchTerm.toLowerCase()) &&
-    p.hash !== currentUserHash
+  const filteredInvitableUsers = profiles.filter(
+    (p) =>
+      p.nickname.toLowerCase().includes(inviteSearchTerm.toLowerCase()) &&
+      p.hash !== currentUserHash,
   );
 
   return (
@@ -468,7 +498,9 @@ export default function ChatRoomPage({ params }: PageProps) {
               {chatRoom ? chatRoom.chatname : `Chat #${chatid}`}
             </h2>
             <p className="text-xs text-slate-400 flex items-center gap-1">
-              {chatRoom?.visibility === "public" ? "Öffentliche Gruppe" : "Private Unterhaltung"}
+              {chatRoom?.visibility === "public"
+                ? "Öffentliche Gruppe"
+                : "Private Unterhaltung"}
               {chatRoom?.role && (
                 <span className="bg-slate-800 text-orange-500 font-semibold px-1.5 py-0.5 rounded text-[10px] uppercase">
                   {chatRoom.role === "owner" ? "Besitzer" : chatRoom.role}
@@ -549,8 +581,12 @@ export default function ChatRoomPage({ params }: PageProps) {
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-500 p-8 text-center">
-            <p className="font-medium text-slate-400">Keine Nachrichten vorhanden</p>
-            <p className="text-xs max-w-xs mt-1">Schreibe die erste Nachricht, um die Unterhaltung zu starten!</p>
+            <p className="font-medium text-slate-400">
+              Keine Nachrichten vorhanden
+            </p>
+            <p className="text-xs max-w-xs mt-1">
+              Schreibe die erste Nachricht, um die Unterhaltung zu starten!
+            </p>
           </div>
         ) : (
           messages
@@ -559,7 +595,9 @@ export default function ChatRoomPage({ params }: PageProps) {
               const isOwn = isOwnMessage(msg);
               const textContent = msg.text || "";
               const replyInfo = renderQuotedReply(textContent);
-              const fileAttachment = parseAttachedFile((replyInfo.isReply ? replyInfo.cleanText : textContent) || "");
+              const fileAttachment = parseAttachedFile(
+                (replyInfo.isReply ? replyInfo.cleanText : textContent) || "",
+              );
 
               return (
                 <div
@@ -577,7 +615,9 @@ export default function ChatRoomPage({ params }: PageProps) {
                   <div className="max-w-[85%] sm:max-w-md relative">
                     <div
                       className={`rounded-2xl p-3.5 shadow-sm text-sm relative transition-all ${
-                        msg.important ? "ring-2 ring-red-500 border border-red-500" : ""
+                        msg.important
+                          ? "ring-2 ring-red-500 border border-red-500"
+                          : ""
                       } ${
                         isOwn
                           ? "bg-gradient-to-tr from-orange-600 to-orange-500 text-white rounded-tr-none"
@@ -601,7 +641,11 @@ export default function ChatRoomPage({ params }: PageProps) {
                             src={`${BASE_URL}?request=getphoto&token=${token}&photoid=${msg.photoid}`}
                             alt="Gesendetes Bild"
                             className="max-h-60 w-full object-cover group-hover/photo:scale-102 transition-transform duration-200"
-                            onClick={() => setLargePhotoUrl(`${BASE_URL}?request=getphoto&token=${token}&photoid=${msg.photoid}`)}
+                            onClick={() =>
+                              setLargePhotoUrl(
+                                `${BASE_URL}?request=getphoto&token=${token}&photoid=${msg.photoid}`,
+                              )
+                            }
                           />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/photo:opacity-100 flex items-center justify-center transition-opacity text-xs font-medium">
                             Bild vergrößern
@@ -622,12 +666,17 @@ export default function ChatRoomPage({ params }: PageProps) {
                           ) : (
                             <div className="flex items-center justify-between gap-3 p-1">
                               <div className="flex items-center gap-2 min-w-0">
-                                <FileText className="text-orange-400 shrink-0" size={24} />
+                                <FileText
+                                  className="text-orange-400 shrink-0"
+                                  size={24}
+                                />
                                 <div className="min-w-0">
                                   <p className="text-xs font-semibold truncate text-slate-200">
                                     {fileAttachment.name}
                                   </p>
-                                  <p className="text-[10px] text-slate-400">PDF Dokument</p>
+                                  <p className="text-[10px] text-slate-400">
+                                    PDF Dokument
+                                  </p>
                                 </div>
                               </div>
                               <a
@@ -647,10 +696,17 @@ export default function ChatRoomPage({ params }: PageProps) {
                       {msg.position && (
                         <div className="mb-2 bg-slate-950 border border-slate-800 rounded-lg p-2.5 flex items-center justify-between gap-4">
                           <div className="flex items-center gap-2">
-                            <MapPin className="text-orange-500 animate-pulse shrink-0" size={20} />
+                            <MapPin
+                              className="text-orange-500 animate-pulse shrink-0"
+                              size={20}
+                            />
                             <div>
-                              <p className="text-xs font-semibold text-slate-200">Standort geteilt</p>
-                              <p className="text-[10px] text-slate-400 truncate max-w-[140px] sm:max-w-xs">{msg.position}</p>
+                              <p className="text-xs font-semibold text-slate-200">
+                                Standort geteilt
+                              </p>
+                              <p className="text-[10px] text-slate-400 truncate max-w-[140px] sm:max-w-xs">
+                                {msg.position}
+                              </p>
                             </div>
                           </div>
                           <a
@@ -665,19 +721,30 @@ export default function ChatRoomPage({ params }: PageProps) {
                       )}
 
                       {/* Render text with resolved URLs */}
-                      {(!fileAttachment || ((replyInfo.isReply ? replyInfo.cleanText : textContent) || "").trim().length > 0) && (
+                      {(!fileAttachment ||
+                        (
+                          (replyInfo.isReply
+                            ? replyInfo.cleanText
+                            : textContent) || ""
+                        ).trim().length > 0) && (
                         <p className="break-words whitespace-pre-wrap leading-relaxed">
                           {renderTextWithLinks(
                             fileAttachment
                               ? ""
-                              : (replyInfo.isReply ? replyInfo.cleanText : textContent) || ""
+                              : (replyInfo.isReply
+                                  ? replyInfo.cleanText
+                                  : textContent) || "",
                           )}
                         </p>
                       )}
 
                       {/* Info Bar inside Bubble */}
                       <div className="flex items-center justify-end gap-1 mt-1 text-[10px] opacity-70">
-                        {msg.important && <span className="text-[9px] font-bold tracking-wide uppercase mr-1">Dringend</span>}
+                        {msg.important && (
+                          <span className="text-[9px] font-bold tracking-wide uppercase mr-1">
+                            Dringend
+                          </span>
+                        )}
                         <span>{msg.time}</span>
                       </div>
                     </div>
@@ -711,7 +778,9 @@ export default function ChatRoomPage({ params }: PageProps) {
       {(replyingTo || draftPhoto || draftFile || draftLocation) && (
         <div className="absolute bottom-20 left-4 right-4 bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-2xl z-10 space-y-2 flex flex-col">
           <div className="flex justify-between items-center pb-1.5 border-b border-slate-800">
-            <h4 className="text-xs font-semibold text-orange-500 uppercase tracking-wider">Entwurf / Vorschau</h4>
+            <h4 className="text-xs font-semibold text-orange-500 uppercase tracking-wider">
+              Entwurf / Vorschau
+            </h4>
             <button
               onClick={() => {
                 setReplyingTo(null);
@@ -729,17 +798,30 @@ export default function ChatRoomPage({ params }: PageProps) {
           {replyingTo && (
             <div className="bg-slate-950 p-2 rounded-lg border-l-2 border-orange-500 flex items-center justify-between text-xs text-slate-300">
               <div>
-                <span className="font-semibold text-orange-400">Antwort an {replyingTo.usernick}:</span>
-                <p className="truncate italic max-w-xs">{replyingTo.text || "[Datei/Bild]"}</p>
+                <span className="font-semibold text-orange-400">
+                  Antwort an {replyingTo.usernick}:
+                </span>
+                <p className="truncate italic max-w-xs">
+                  {replyingTo.text || "[Datei/Bild]"}
+                </p>
               </div>
-              <button onClick={() => setReplyingTo(null)} className="text-slate-500 hover:text-slate-300">Entfernen</button>
+              <button
+                onClick={() => setReplyingTo(null)}
+                className="text-slate-500 hover:text-slate-300"
+              >
+                Entfernen
+              </button>
             </div>
           )}
 
           {/* Photo attachment draft */}
           {draftPhoto && (
             <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-slate-800 self-start">
-              <img src={draftPhoto} alt="Kamera Vorschau" className="w-full h-full object-cover" />
+              <img
+                src={draftPhoto}
+                alt="Kamera Vorschau"
+                className="w-full h-full object-cover"
+              />
               <button
                 onClick={() => setDraftPhoto(null)}
                 className="absolute top-1 right-1 p-0.5 bg-black/60 rounded-full text-white hover:bg-black/90 transition-colors"
@@ -754,9 +836,16 @@ export default function ChatRoomPage({ params }: PageProps) {
             <div className="flex items-center justify-between bg-slate-950 p-2 rounded-lg border border-slate-800 text-xs">
               <div className="flex items-center gap-2 min-w-0">
                 <FileText className="text-orange-500" size={18} />
-                <span className="truncate max-w-xs text-slate-300 font-medium">{draftFile.name}</span>
+                <span className="truncate max-w-xs text-slate-300 font-medium">
+                  {draftFile.name}
+                </span>
               </div>
-              <button onClick={() => setDraftFile(null)} className="text-slate-500 hover:text-slate-300 text-xs font-semibold">Entfernen</button>
+              <button
+                onClick={() => setDraftFile(null)}
+                className="text-slate-500 hover:text-slate-300 text-xs font-semibold"
+              >
+                Entfernen
+              </button>
             </div>
           )}
 
@@ -765,9 +854,17 @@ export default function ChatRoomPage({ params }: PageProps) {
             <div className="flex items-center justify-between bg-slate-950 p-2 rounded-lg border border-slate-800 text-xs">
               <div className="flex items-center gap-2">
                 <Compass className="text-orange-500 shrink-0" size={18} />
-                <span className="text-slate-300">GPS Koordinaten: {draftLocation.lat.toFixed(5)}, {draftLocation.lng.toFixed(5)}</span>
+                <span className="text-slate-300">
+                  GPS Koordinaten: {draftLocation.lat.toFixed(5)},{" "}
+                  {draftLocation.lng.toFixed(5)}
+                </span>
               </div>
-              <button onClick={() => setDraftLocation(null)} className="text-slate-500 hover:text-slate-300 text-xs font-semibold">Entfernen</button>
+              <button
+                onClick={() => setDraftLocation(null)}
+                className="text-slate-500 hover:text-slate-300 text-xs font-semibold"
+              >
+                Entfernen
+              </button>
             </div>
           )}
         </div>
@@ -775,7 +872,10 @@ export default function ChatRoomPage({ params }: PageProps) {
 
       {/* ── Input Bar ── */}
       <div className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 p-3 z-10">
-        <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto flex items-center gap-2">
+        <form
+          onSubmit={handleSendMessage}
+          className="max-w-4xl mx-auto flex items-center gap-2"
+        >
           {/* File input (Hidden) */}
           <input
             type="file"
@@ -811,7 +911,9 @@ export default function ChatRoomPage({ params }: PageProps) {
             onClick={retrieveLocation}
             disabled={gettingLocation}
             className={`p-2.5 hover:bg-slate-800 rounded-full transition-colors ${
-              gettingLocation ? "text-orange-500 animate-spin" : "text-slate-400 hover:text-white"
+              gettingLocation
+                ? "text-orange-500 animate-spin"
+                : "text-slate-400 hover:text-white"
             }`}
             title="Standort ermitteln"
           >
@@ -821,7 +923,11 @@ export default function ChatRoomPage({ params }: PageProps) {
           {/* Text Input */}
           <input
             type="text"
-            placeholder={draftFile ? "Datei angehängt. Klicke Senden..." : "Nachricht schreiben..."}
+            placeholder={
+              draftFile
+                ? "Datei angehängt. Klicke Senden..."
+                : "Nachricht schreiben..."
+            }
             value={draftText}
             onChange={(e) => setDraftText(e.target.value)}
             disabled={sending || !!draftFile}
@@ -845,7 +951,10 @@ export default function ChatRoomPage({ params }: PageProps) {
           {/* Send button */}
           <button
             type="submit"
-            disabled={sending || (!draftText && !draftPhoto && !draftFile && !draftLocation)}
+            disabled={
+              sending ||
+              (!draftText && !draftPhoto && !draftFile && !draftLocation)
+            }
             className="p-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-full transition-colors disabled:bg-slate-800 disabled:text-slate-600 cursor-pointer shrink-0"
             title="Senden"
           >
@@ -914,13 +1023,22 @@ export default function ChatRoomPage({ params }: PageProps) {
 
             <div className="max-h-60 overflow-y-auto divide-y divide-slate-800">
               {filteredInvitableUsers.length === 0 ? (
-                <p className="text-xs text-slate-500 text-center py-4">Keine passenden Nutzer gefunden.</p>
+                <p className="text-xs text-slate-500 text-center py-4">
+                  Keine passenden Nutzer gefunden.
+                </p>
               ) : (
                 filteredInvitableUsers.map((user) => (
-                  <div key={user.hash} className="py-2.5 flex items-center justify-between gap-4">
+                  <div
+                    key={user.hash}
+                    className="py-2.5 flex items-center justify-between gap-4"
+                  >
                     <div>
-                      <p className="text-sm font-semibold text-slate-200">@{user.nickname}</p>
-                      <p className="text-[10px] text-slate-500 truncate max-w-[150px]">{user.hash}</p>
+                      <p className="text-sm font-semibold text-slate-200">
+                        @{user.nickname}
+                      </p>
+                      <p className="text-[10px] text-slate-500 truncate max-w-[150px]">
+                        {user.hash}
+                      </p>
                     </div>
                     <button
                       onClick={() => handleInviteUser(user.hash)}

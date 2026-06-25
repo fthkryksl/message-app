@@ -3,8 +3,29 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Instrument_Serif } from "next/font/google";
-import { Plus, Search as SearchIcon, MessageCircle, MessageSquare, AlertCircle, RefreshCw, X, Check, Users, Lock, LogOut } from "lucide-react";
-import { getChats, createChat, getInvites, joinChat, leaveChat, ChatRoom, Invite, getMessages } from "@/lib/api";
+import {
+  Plus,
+  Search as SearchIcon,
+  MessageCircle,
+  MessageSquare,
+  AlertCircle,
+  RefreshCw,
+  X,
+  Check,
+  Users,
+  Lock,
+  LogOut,
+} from "lucide-react";
+import {
+  getChats,
+  createChat,
+  getInvites,
+  joinChat,
+  leaveChat,
+  ChatRoom,
+  Invite,
+  getMessages,
+} from "@/lib/api";
 import { getToken, getUserHash } from "@/lib/auth";
 import BlurText from "@/components/BlurText";
 
@@ -13,7 +34,7 @@ const instrumentSerif = Instrument_Serif({ weight: "400", subsets: ["latin"] });
 export default function MessagesPage() {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
-  
+
   // States
   const [chats, setChats] = useState<ChatRoom[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
@@ -46,35 +67,41 @@ export default function MessagesPage() {
     if (!token) return;
     try {
       const chatRooms = await getChats(token);
-      const joinedChats = chatRooms.filter(c => c.joined);
+      const joinedChats = chatRooms.filter((c) => c.joined);
       setChats(joinedChats);
-      
+
       const pendingInvites = await getInvites(token);
       setInvites(pendingInvites);
       setError(null);
 
       // Lazily fetch contact names for private chats
-      joinedChats.forEach(chat => {
+      joinedChats.forEach((chat) => {
         if (chat.visibility === "private") {
           // Check if we already have a name (either actual or fallback)
-          setContactNames(prev => {
+          setContactNames((prev) => {
             if (prev[chat.chatid]) return prev;
-            
+
             // If not, fetch it.
-            getMessages(token, chat.chatid).then(msgs => {
-               const otherUserMsg = msgs.find(m => m.userhash !== currentUserHash);
-               setContactNames(current => ({
-                 ...current,
-                 [chat.chatid]: otherUserMsg ? otherUserMsg.usernick : chat.chatname
-               }));
-            }).catch(() => {
-               // On error (e.g. 403), set a fallback so we don't spam requests
-               setContactNames(current => ({
-                 ...current,
-                 [chat.chatid]: chat.chatname
-               }));
-            });
-            
+            getMessages(token, chat.chatid)
+              .then((msgs) => {
+                const otherUserMsg = msgs.find(
+                  (m) => m.userhash !== currentUserHash,
+                );
+                setContactNames((current) => ({
+                  ...current,
+                  [chat.chatid]: otherUserMsg
+                    ? otherUserMsg.usernick
+                    : chat.chatname,
+                }));
+              })
+              .catch(() => {
+                // On error (e.g. 403), set a fallback so we don't spam requests
+                setContactNames((current) => ({
+                  ...current,
+                  [chat.chatid]: chat.chatname,
+                }));
+              });
+
             // Return unchanged for now, the promise will update it later
             return prev;
           });
@@ -91,7 +118,7 @@ export default function MessagesPage() {
   useEffect(() => {
     if (!token) return;
     fetchData();
-    
+
     // Auto-poll overview lists every 8 seconds
     const interval = setInterval(fetchData, 8000);
     return () => clearInterval(interval);
@@ -112,7 +139,9 @@ export default function MessagesPage() {
   // Decline Invite Handler
   const handleDeclineInvite = async (chatid: number) => {
     if (!token) return;
-    const confirm = window.confirm("Möchtest du diese Einladung wirklich ablehnen?");
+    const confirm = window.confirm(
+      "Möchtest du diese Einladung wirklich ablehnen?",
+    );
     if (!confirm) return;
     try {
       await leaveChat(token, chatid);
@@ -130,7 +159,11 @@ export default function MessagesPage() {
     setCreating(true);
     setError(null);
     try {
-      const chatid = await createChat(token, newChatName.trim(), newChatIsPublic);
+      const chatid = await createChat(
+        token,
+        newChatName.trim(),
+        newChatIsPublic,
+      );
       setShowCreateModal(false);
       setNewChatName("");
       setNewChatIsPublic(false);
@@ -144,8 +177,8 @@ export default function MessagesPage() {
   };
 
   // Filtered chats list
-  const filteredChats = chats.filter(chat =>
-    chat.chatname.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredChats = chats.filter((chat) =>
+    chat.chatname.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
@@ -171,7 +204,10 @@ export default function MessagesPage() {
               className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
               title="Aktualisieren"
             >
-              <RefreshCw size={20} className={loading ? "animate-spin text-orange-500" : ""} />
+              <RefreshCw
+                size={20}
+                className={loading ? "animate-spin text-orange-500" : ""}
+              />
             </button>
             <button
               onClick={() => setShowCreateModal(true)}
@@ -185,7 +221,10 @@ export default function MessagesPage() {
 
         {/* Search Bar */}
         <div className="relative">
-          <SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <SearchIcon
+            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          />
           <input
             type="text"
             placeholder="Meine Chats durchsuchen..."
@@ -213,10 +252,17 @@ export default function MessagesPage() {
             </h3>
             <div className="divide-y divide-slate-800">
               {invites.map((invite) => (
-                <div key={invite.chatid} className="py-3 flex items-center justify-between gap-4 first:pt-0 last:pb-0">
+                <div
+                  key={invite.chatid}
+                  className="py-3 flex items-center justify-between gap-4 first:pt-0 last:pb-0"
+                >
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-200 truncate">{invite.chatname}</p>
-                    <p className="text-[10px] text-slate-400">Gruppe #{invite.chatid}</p>
+                    <p className="text-sm font-semibold text-slate-200 truncate">
+                      {invite.chatname}
+                    </p>
+                    <p className="text-[10px] text-slate-400">
+                      Gruppe #{invite.chatid}
+                    </p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
@@ -248,43 +294,57 @@ export default function MessagesPage() {
               <p className="text-sm">Chats werden geladen...</p>
             </div>
           ) : filteredChats.length > 0 ? (
-              filteredChats.map((chat) => {
-                const isPublic = chat.visibility === "public";
-                const displayLarge = isPublic ? chat.chatname : (contactNames[chat.chatid] || chat.chatname);
-                const displaySmall = isPublic 
-                  ? `Gruppe • ID: ${chat.chatid}` 
-                  : `${chat.chatname} • ID: ${chat.chatid}`;
+            filteredChats.map((chat) => {
+              const isPublic = chat.visibility === "public";
+              const displayLarge = isPublic
+                ? chat.chatname
+                : contactNames[chat.chatid] || chat.chatname;
+              const displaySmall = isPublic
+                ? `Gruppe • ID: ${chat.chatid}`
+                : `${chat.chatname} • ID: ${chat.chatid}`;
 
-                return (
-                  <div
-                    key={chat.chatid}
-                    onClick={() => router.push(`/messages/${chat.chatid}`)}
-                    className="p-4 bg-slate-900 border border-slate-850 hover:bg-slate-800 hover:border-slate-700 transition-all cursor-pointer rounded-2xl active:bg-slate-750 flex items-center justify-between gap-4 shadow-sm"
-                  >
-                    <div className="flex items-center gap-3.5 min-w-0">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-orange-600 to-orange-500 flex items-center justify-center font-bold text-base shadow-inner text-white select-none">
-                        {displayLarge.substring(0, 2).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="font-semibold text-slate-200 truncate">{displayLarge}</h3>
-                        <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5 truncate">
-                          {isPublic ? <Users size={12} className="shrink-0" /> : <Lock size={12} className="shrink-0" />}
-                          {displaySmall}
-                        </p>
-                      </div>
+              return (
+                <div
+                  key={chat.chatid}
+                  onClick={() => router.push(`/messages/${chat.chatid}`)}
+                  className="p-4 bg-slate-900 border border-slate-850 hover:bg-slate-800 hover:border-slate-700 transition-all cursor-pointer rounded-2xl active:bg-slate-750 flex items-center justify-between gap-4 shadow-sm"
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-orange-600 to-orange-500 flex items-center justify-center font-bold text-base shadow-inner text-white select-none">
+                      {displayLarge.substring(0, 2).toUpperCase()}
                     </div>
-                    <div className="text-orange-500 hover:text-orange-400 p-2 shrink-0">
-                      <MessageSquare size={18} />
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-slate-200 truncate">
+                        {displayLarge}
+                      </h3>
+                      <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5 truncate">
+                        {isPublic ? (
+                          <Users size={12} className="shrink-0" />
+                        ) : (
+                          <Lock size={12} className="shrink-0" />
+                        )}
+                        {displaySmall}
+                      </p>
                     </div>
                   </div>
-                );
-              })
+                  <div className="text-orange-500 hover:text-orange-400 p-2 shrink-0">
+                    <MessageSquare size={18} />
+                  </div>
+                </div>
+              );
+            })
           ) : (
             <div className="p-12 text-center text-slate-500 bg-slate-900/40 rounded-3xl border border-slate-900/60">
-              <MessageCircle size={32} className="mx-auto text-slate-600 mb-2" />
-              <p className="text-sm font-semibold text-slate-400">Keine Chats aktiv</p>
+              <MessageCircle
+                size={32}
+                className="mx-auto text-slate-600 mb-2"
+              />
+              <p className="text-sm font-semibold text-slate-400">
+                Keine Chats aktiv
+              </p>
               <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                Erstelle einen neuen Chat über das Plus-Symbol oben oder suche öffentliche Gruppen unter "Gruppen".
+                Erstelle einen neuen Chat über das Plus-Symbol oben oder suche
+                öffentliche Gruppen unter "Gruppen".
               </p>
             </div>
           )}
@@ -309,7 +369,10 @@ export default function MessagesPage() {
 
             <form onSubmit={handleCreateChat} className="space-y-4">
               <div>
-                <label htmlFor="chatname" className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                <label
+                  htmlFor="chatname"
+                  className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5"
+                >
                   Chatname
                 </label>
                 <input
@@ -325,8 +388,12 @@ export default function MessagesPage() {
 
               <div className="flex items-center justify-between py-1 border-t border-b border-slate-800">
                 <div>
-                  <span className="text-xs font-semibold text-slate-200 block">Öffentlicher Chat</span>
-                  <span className="text-[10px] text-slate-500 block">Jeder kann diesen Chat suchen und beitreten</span>
+                  <span className="text-xs font-semibold text-slate-200 block">
+                    Öffentlicher Chat
+                  </span>
+                  <span className="text-[10px] text-slate-500 block">
+                    Jeder kann diesen Chat suchen und beitreten
+                  </span>
                 </div>
                 <input
                   type="checkbox"
