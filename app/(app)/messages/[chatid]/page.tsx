@@ -23,6 +23,7 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
+  ArrowDown,
 } from "lucide-react";
 import {
   getMessages,
@@ -182,6 +183,8 @@ export default function ChatRoomPage({ params }: PageProps) {
   const [activeMessageMenuId, setActiveMessageMenuId] = useState<number | null>(
     null,
   );
+  const [hasScrolledInitial, setHasScrolledInitial] = useState(false);
+  const [showScrollDownButton, setShowScrollDownButton] = useState(false);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -274,9 +277,29 @@ export default function ChatRoomPage({ params }: PageProps) {
     return () => clearInterval(interval);
   }, [token, chatid]);
 
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const container = e.currentTarget;
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    setShowScrollDownButton(distanceFromBottom > 150);
+  };
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length, deletedMsgIds]);
+    if (!loading && messages.length > 0 && !hasScrolledInitial) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+      setHasScrolledInitial(true);
+    }
+  }, [loading, messages, hasScrolledInitial]);
+
+  const prevMessagesLengthRef = useRef(messages.length);
+  useEffect(() => {
+    if (messages.length > prevMessagesLengthRef.current) {
+      if (!showScrollDownButton) {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+    prevMessagesLengthRef.current = messages.length;
+  }, [messages.length, showScrollDownButton]);
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -329,6 +352,7 @@ export default function ChatRoomPage({ params }: PageProps) {
       setImportantFlag(false);
 
       await fetchMessages();
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     } catch (err: any) {
       setError(err.message ?? "Fehler beim Versenden der Nachricht.");
     } finally {
@@ -660,7 +684,7 @@ export default function ChatRoomPage({ params }: PageProps) {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 bg-slate-950 pb-24">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 bg-slate-950 pb-24" onScroll={handleScroll}>
         {loading ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-2">
             <RefreshCw className="animate-spin text-orange-500" size={24} />
@@ -896,6 +920,16 @@ export default function ChatRoomPage({ params }: PageProps) {
         )}
         <div ref={messagesEndRef} />
       </div>
+
+      {showScrollDownButton && (
+        <button
+          onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })}
+          className="absolute bottom-24 right-4 z-20 bg-orange-600 hover:bg-orange-500 text-white rounded-full py-2 px-3.5 shadow-lg flex items-center gap-1.5 text-xs font-semibold cursor-pointer transition-all hover:scale-105 active:scale-95 animate-in fade-in duration-200"
+          type="button"
+        >
+          <ArrowDown size={14} /> Nach unten
+        </button>
+      )}
 
       {(replyingTo || draftPhoto || draftFile || draftLocation) && (
         <div className="absolute bottom-20 left-4 right-4 bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-2xl z-10 space-y-2 flex flex-col">
