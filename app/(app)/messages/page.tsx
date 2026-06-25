@@ -166,7 +166,7 @@ export default function MessagesPage() {
   );
 
   return (
-    <div className="w-full h-full bg-slate-950 text-white flex flex-col min-h-screen">
+    <div className="w-full h-full bg-slate-950 text-white flex flex-col min-h-screen overflow-x-hidden">
       <div className="sticky top-0 bg-slate-900 border-b border-slate-800 p-4 z-10 shadow-md">
         <div className="flex items-center justify-between mb-4">
           <h1 className={`${instrumentSerif.className} text-2xl font-bold`}>

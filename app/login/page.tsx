@@ -62,7 +62,7 @@ export default function SignIn() {
   };
 
   return (
-    <div className="min-h-screen bg-white p-2 pb-2 sm:p-4">
+    <div className="min-h-screen bg-gradient-to-tr from-zinc-50 via-white to-zinc-50 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950 p-2 pb-2 sm:p-4">
       <div className="relative flex flex-col flex-1 items-center justify-center h-[calc(100vh-1rem)] sm:h-[calc(100vh-2rem)] rounded-[2rem] overflow-hidden border border-zinc-100 shadow-sm">
         <div className="absolute inset-0 z-0">
           <Grainient
