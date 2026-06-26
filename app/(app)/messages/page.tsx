@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Instrument_Serif } from "next/font/google";
 import { Plus, Search as SearchIcon, MessageCircle, MessageSquare, AlertCircle, RefreshCw, X, Check, Users, Lock, LogOut } from "lucide-react";
-import { getChats, createChat, getInvites, joinChat, leaveChat, ChatRoom, Invite, getMessages } from "@/lib/api";
+import { getChats, createChat, getInvites, joinChat, leaveChat, ChatRoom, Invite, getMessages, ChatMessage } from "@/lib/api";
 import { getToken, getUserHash } from "@/lib/auth";
 import BlurText from "@/components/BlurText";
 
@@ -22,6 +22,9 @@ export default function MessagesPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentUserHash, setCurrentUserHash] = useState<string | null>(null);
   const [contactNames, setContactNames] = useState<Record<number, string>>({});
+  const [latestMessages, setLatestMessages] = useState<Record<number, ChatMessage>>({});
+  const fetchedContactNamesRef = useRef<Set<number>>(new Set());
+  const isFetchingBackgroundRef = useRef(false);
 
   // Create Chat Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -46,45 +49,65 @@ export default function MessagesPage() {
     if (!token) return;
     try {
       const chatRooms = await getChats(token);
-      const joinedChats = chatRooms.filter(c => c.joined);
-      setChats(joinedChats);
+      // Nachrichten-Reiter zeigt nur private Chats, denen man beigetreten ist
+      const joinedPrivateChats = chatRooms.filter(c => c.joined && c.visibility === "private");
+      setChats(joinedPrivateChats);
       
       const pendingInvites = await getInvites(token);
       setInvites(pendingInvites);
       setError(null);
 
-      // Lazily fetch contact names for private chats
-      joinedChats.forEach(chat => {
-        if (chat.visibility === "private") {
-          // Check if we already have a name (either actual or fallback)
-          setContactNames(prev => {
-            if (prev[chat.chatid]) return prev;
-            
-            // If not, fetch it.
-            getMessages(token, chat.chatid).then(msgs => {
-               const otherUserMsg = msgs.find(m => m.userhash !== currentUserHash);
-               setContactNames(current => ({
-                 ...current,
-                 [chat.chatid]: otherUserMsg ? otherUserMsg.usernick : chat.chatname
-               }));
-            }).catch(() => {
-               // On error (e.g. 403), set a fallback so we don't spam requests
-               setContactNames(current => ({
-                 ...current,
-                 [chat.chatid]: chat.chatname
-               }));
-            });
-            
-            // Return unchanged for now, the promise will update it later
-            return prev;
-          });
-        }
-      });
+      // Basic data loaded, stop the UI spinner
+      setLoading(false);
+
+      // Trigger background fetch for messages (non-blocking)
+      fetchLatestMessagesInBackground(joinedPrivateChats);
+
     } catch (err: any) {
       // Wir verzichten hier auf console.error, damit der Next.js Error-Overlay nicht bei jedem Polling-Fehler aufploppt
       setError("Daten konnten nicht aktualisiert werden.");
-    } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchLatestMessagesInBackground = async (chatsToFetch: ChatRoom[]) => {
+    if (!token || isFetchingBackgroundRef.current) return;
+    isFetchingBackgroundRef.current = true;
+    
+    try {
+      // Sequenziell abfragen, um das Backend nicht mit parallelen Requests zu fluten (Rate Limiting)
+      for (const chat of chatsToFetch) {
+        try {
+          const msgs = await getMessages(token, chat.chatid);
+          if (msgs.length > 0) {
+            setLatestMessages(current => ({
+              ...current,
+              [chat.chatid]: msgs[msgs.length - 1]
+            }));
+          }
+          
+          if (chat.visibility === "private" && !fetchedContactNamesRef.current.has(chat.chatid)) {
+            fetchedContactNamesRef.current.add(chat.chatid);
+            const otherUserMsg = msgs.find(m => m.userhash !== currentUserHash);
+            setContactNames(current => ({
+              ...current,
+              [chat.chatid]: otherUserMsg ? otherUserMsg.usernick : chat.chatname
+            }));
+          }
+          // Kurze Pause, um den Server durchatmen zu lassen
+          await new Promise(resolve => setTimeout(resolve, 300));
+        } catch (err) {
+          if (chat.visibility === "private" && !fetchedContactNamesRef.current.has(chat.chatid)) {
+            fetchedContactNamesRef.current.add(chat.chatid);
+            setContactNames(current => ({
+              ...current,
+              [chat.chatid]: chat.chatname
+            }));
+          }
+        }
+      }
+    } finally {
+      isFetchingBackgroundRef.current = false;
     }
   };
 
@@ -92,8 +115,8 @@ export default function MessagesPage() {
     if (!token) return;
     fetchData();
     
-    // Auto-poll overview lists every 8 seconds
-    const interval = setInterval(fetchData, 8000);
+    // Auto-poll overview lists every 30 seconds to reduce server load
+    const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, [token]);
 
@@ -248,37 +271,80 @@ export default function MessagesPage() {
               <p className="text-sm">Chats werden geladen...</p>
             </div>
           ) : filteredChats.length > 0 ? (
-              filteredChats.map((chat) => {
+            (() => {
+              const parseTime = (timeStr: string) => {
+                const timeMatch = timeStr.match(/^(\d{4}-\d{2}-\d{2})_(\d{2})-(\d{2})-(\d{2})$/);
+                if (timeMatch) {
+                   const [_, datePart, hour, minute, second] = timeMatch;
+                   return new Date(`${datePart}T${hour}:${minute}:${second}`).getTime();
+                }
+                return new Date(timeStr.replace(' ', 'T')).getTime();
+              };
+
+              const sortedChats = [...filteredChats].sort((a, b) => {
+                const msgA = latestMessages[a.chatid];
+                const msgB = latestMessages[b.chatid];
+                if (!msgA && !msgB) return 0;
+                if (!msgA) return 1;
+                if (!msgB) return -1;
+                return parseTime(msgB.time) - parseTime(msgA.time);
+              });
+
+              return sortedChats.map((chat) => {
                 const isPublic = chat.visibility === "public";
                 const displayLarge = isPublic ? chat.chatname : (contactNames[chat.chatid] || chat.chatname);
                 const displaySmall = isPublic 
                   ? `Gruppe • ID: ${chat.chatid}` 
                   : `${chat.chatname} • ID: ${chat.chatid}`;
+                const latestMsg = latestMessages[chat.chatid];
+                let isUnread = false;
+                if (latestMsg && typeof window !== "undefined") {
+                   const lastReadStr = localStorage.getItem(`lastRead_${chat.chatid}`);
+                   if (!lastReadStr) {
+                      isUnread = true;
+                   } else {
+                      const msgTime = parseTime(latestMsg.time);
+                      const readTime = new Date(lastReadStr).getTime();
+                      if (msgTime > readTime) isUnread = true;
+                   }
+                }
+
+                let previewText = displaySmall;
+                if (latestMsg) {
+                   previewText = latestMsg.text ? latestMsg.text : (latestMsg.photoid ? "📷 Foto gesendet" : previewText);
+                }
 
                 return (
                   <div
                     key={chat.chatid}
                     onClick={() => router.push(`/messages/${chat.chatid}`)}
-                    className="p-4 bg-slate-900 border border-slate-850 hover:bg-slate-800 hover:border-slate-700 transition-all cursor-pointer rounded-2xl active:bg-slate-750 flex items-center justify-between gap-4 shadow-sm"
+                    className={`p-4 bg-slate-900 border ${isUnread ? "border-orange-500/50 bg-slate-800/80" : "border-slate-850 hover:bg-slate-800 hover:border-slate-700"} transition-all cursor-pointer rounded-2xl active:bg-slate-750 flex items-center justify-between gap-4 shadow-sm relative`}
                   >
                     <div className="flex items-center gap-3.5 min-w-0">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-orange-600 to-orange-500 flex items-center justify-center font-bold text-base shadow-inner text-white select-none">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-orange-600 to-orange-500 flex items-center justify-center font-bold text-base shadow-inner text-white select-none relative">
                         {displayLarge.substring(0, 2).toUpperCase()}
+                        {isUnread && (
+                           <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                             <span className="relative inline-flex rounded-full h-4 w-4 bg-orange-500 border-2 border-slate-900"></span>
+                           </span>
+                        )}
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-semibold text-slate-200 truncate">{displayLarge}</h3>
-                        <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5 truncate">
+                        <h3 className={`font-semibold truncate ${isUnread ? "text-orange-100" : "text-slate-200"}`}>{displayLarge}</h3>
+                        <p className={`text-xs flex items-center gap-1 mt-0.5 truncate ${isUnread ? "text-slate-300 font-medium" : "text-slate-400"}`}>
                           {isPublic ? <Users size={12} className="shrink-0" /> : <Lock size={12} className="shrink-0" />}
-                          {displaySmall}
+                          {previewText}
                         </p>
                       </div>
                     </div>
-                    <div className="text-orange-500 hover:text-orange-400 p-2 shrink-0">
+                    <div className={`${isUnread ? "text-orange-400" : "text-slate-600 hover:text-slate-400"} p-2 shrink-0 transition-colors`}>
                       <MessageSquare size={18} />
                     </div>
                   </div>
                 );
-              })
+              });
+            })()
           ) : (
             <div className="p-12 text-center text-slate-500 bg-slate-900/40 rounded-3xl border border-slate-900/60">
               <MessageCircle size={32} className="mx-auto text-slate-600 mb-2" />
