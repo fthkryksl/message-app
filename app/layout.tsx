@@ -14,6 +14,7 @@ const interTight = Inter_Tight({
 export const metadata: Metadata = {
   title: "Talks – Nachrichten App",
   description: "Willkommen bei Talks",
+  manifest: "/manifest.json",
 };
 
 export const viewport: Viewport = {
@@ -29,7 +30,7 @@ export default function RootLayout({
     <html
       lang="de"
       className={cn(
-        "h-full w-full",
+        "h-full w-full overflow-hidden",
         "antialiased",
         interTight.variable,
         "font-sans",
@@ -38,17 +39,6 @@ export default function RootLayout({
     >
       <body className="h-screen w-screen overflow-hidden bg-slate-950">
         {children}
-        <Script id="unregister-sw" strategy="afterInteractive">
-          {`
-            if ('serviceWorker' in navigator) {
-              navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
-                  registration.unregister();
-                }
-              });
-            }
-          `}
-        </Script>
       </body>
     </html>
   );

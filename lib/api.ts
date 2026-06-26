@@ -1,4 +1,13 @@
 import { clearAuth } from "./auth";
+import {
+  saveChatsOffline,
+  getChatsOffline,
+  saveMessagesOffline,
+  getMessagesOffline,
+  saveProfilesOffline,
+  getProfilesOffline,
+  addToOutbox
+} from "./db";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -125,14 +134,24 @@ export async function getMessages(
   if (fromid !== undefined) params.fromid = String(fromid);
 
   const url = buildUrl(params);
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.message ?? `Failed to fetch messages (${res.status})`);
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch messages (${res.status})`);
+    }
+    const data = await res.json();
+    const messages = data.messages ?? [];
+    if (chatid !== undefined) {
+      await saveMessagesOffline(chatid, messages).catch(() => {});
+    }
+    return messages;
+  } catch (err: any) {
+    if (chatid !== undefined) {
+      console.warn("Network failed, loading messages from offline DB...");
+      return await getMessagesOffline(chatid);
+    }
+    return [];
   }
-
-  const data = await res.json();
-  return data.messages ?? [];
 }
 
 // Post Message
@@ -146,22 +165,40 @@ export async function postMessage(
     important?: boolean;
   },
 ): Promise<void> {
-  const res = await fetch(BASE_URL || "", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    cache: "no-store",
-    body: JSON.stringify({
-      request: "postmessage",
-      token,
-      ...params,
-    }),
-  });
+  try {
+    const res = await fetch(BASE_URL || "", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+      body: JSON.stringify({
+        request: "postmessage",
+        token,
+        ...params,
+      }),
+    });
 
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || data.status === "error") {
-    throw new Error(data.message ?? `Failed to post message (${res.status})`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.status === "error") {
+      throw new Error(data.message ?? `Failed to post message (${res.status})`);
+    }
+  } catch (err: any) {
+    // If network fails (fetch throws) or offline
+    if (!navigator.onLine || err.message === "Failed to fetch" || err.message.includes("fetch")) {
+      console.warn("Offline, saving message to outbox...");
+      if (params.chatid !== undefined) {
+        await addToOutbox({
+          chatid: params.chatid,
+          text: params.text,
+          photo: params.photo,
+          position: params.position,
+          important: params.important,
+        });
+        return; // Success (offline)
+      }
+    }
+    throw err;
   }
 }
 
@@ -170,14 +207,19 @@ export async function postMessage(
 // Get Chats
 export async function getChats(token: string): Promise<ChatRoom[]> {
   const url = buildUrl({ request: "getchats", token });
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.message ?? `Failed to fetch chats (${res.status})`);
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch chats (${res.status})`);
+    }
+    const data = await res.json();
+    const chats = data.chats ?? [];
+    await saveChatsOffline(chats).catch(() => {});
+    return chats;
+  } catch (err: any) {
+    console.warn("Network failed, loading chats from offline DB...");
+    return await getChatsOffline();
   }
-
-  const data = await res.json();
-  return data.chats ?? [];
 }
 
 // Create Chat
@@ -244,14 +286,19 @@ export async function leaveChat(token: string, chatid: number): Promise<void> {
 // Get Profiles
 export async function getProfiles(token: string): Promise<UserProfile[]> {
   const url = buildUrl({ request: "getprofiles", token });
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.message ?? `Failed to fetch profiles (${res.status})`);
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch profiles (${res.status})`);
+    }
+    const data = await res.json();
+    const profiles = data.profiles ?? [];
+    await saveProfilesOffline(profiles).catch(() => {});
+    return profiles;
+  } catch (err: any) {
+    console.warn("Network failed, loading profiles from offline DB...");
+    return await getProfilesOffline();
   }
-
-  const data = await res.json();
-  return data.profiles ?? [];
 }
 
 // Get Invites

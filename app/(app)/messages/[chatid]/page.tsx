@@ -39,6 +39,7 @@ import {
   UserProfile,
 } from "@/lib/api";
 import { getToken, getUserHash } from "@/lib/auth";
+import { getOutboxForChat, OutboxMessage } from "@/lib/db";
 
 const LeafletMap = dynamic(() => import("@/components/LeafletMap"), {
   ssr: false,
@@ -150,6 +151,7 @@ export default function ChatRoomPage({ params }: PageProps) {
 
   const [chatRoom, setChatRoom] = useState<ChatRoom | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [outboxMessages, setOutboxMessages] = useState<OutboxMessage[]>([]);
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -267,7 +269,11 @@ export default function ChatRoomPage({ params }: PageProps) {
     if (!token) return;
     try {
       const msgs = await getMessages(token, chatid);
-      setMessages(msgs);
+      setMessages(current => {
+        if (msgs.length === 0 && current.length > 0) return current;
+        if (JSON.stringify(current) === JSON.stringify(msgs)) return current;
+        return msgs;
+      });
       // "Zuletzt gelesen" für diesen Chat aktualisieren
       localStorage.setItem(`lastRead_${chatid}`, new Date().toISOString());
       setError(null);
@@ -276,6 +282,11 @@ export default function ChatRoomPage({ params }: PageProps) {
     } finally {
       setLoading(false);
     }
+
+    try {
+      const outbox = await getOutboxForChat(chatid);
+      setOutboxMessages(outbox);
+    } catch (e) {}
   };
 
   useEffect(() => {
@@ -283,10 +294,10 @@ export default function ChatRoomPage({ params }: PageProps) {
 
     fetchMessages();
 
-    // Set up polling interval every 5 seconds
+    // Set up polling interval every 20 seconds
     const interval = setInterval(() => {
       fetchMessages();
-    }, 5000);
+    }, 20000);
 
     return () => clearInterval(interval);
   }, [token, chatid]);
@@ -631,7 +642,7 @@ export default function ChatRoomPage({ params }: PageProps) {
   );
 
   return (
-    <div className="flex flex-col h-screen bg-slate-950 text-white relative">
+    <div className="fixed inset-0 z-50 flex flex-col bg-slate-950 text-white overflow-hidden">
       <header className="sticky top-0 bg-slate-900 border-b border-slate-800 p-4 z-20 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-3">
           <button
@@ -726,7 +737,7 @@ export default function ChatRoomPage({ params }: PageProps) {
       <div 
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 bg-slate-950 pb-24 relative"
+        className="flex-1 overflow-y-auto p-4 space-y-4"
       >
         {loading ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-2">
@@ -746,7 +757,28 @@ export default function ChatRoomPage({ params }: PageProps) {
         ) : (
           (() => {
             let lastDateLabel = "";
-            return messages
+            const displayMessages: (ChatMessage & { isOutbox?: boolean })[] = [
+              ...messages,
+              ...outboxMessages.map(o => {
+                const date = new Date(o.createdAt);
+                const timeStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}_${String(date.getHours()).padStart(2, '0')}-${String(date.getMinutes()).padStart(2, '0')}-${String(date.getSeconds()).padStart(2, '0')}`;
+                return {
+                  id: -o.id,
+                  chatid: o.chatid,
+                  userid: currentUserHash || "",
+                  time: timeStr,
+                  important: o.important || false,
+                  usernick: "Du",
+                  userhash: currentUserHash || "",
+                  text: o.text,
+                  photoid: o.photo ? "local_outbox" : undefined,
+                  position: o.position,
+                  isOutbox: true
+                } as ChatMessage & { isOutbox?: boolean };
+              })
+            ];
+
+            return displayMessages
               .filter((msg) => !deletedMsgIds.includes(msg.id))
               .map((msg) => {
                 const isOwn = isOwnMessage(msg);
@@ -918,6 +950,9 @@ export default function ChatRoomPage({ params }: PageProps) {
                                 Dringend
                               </span>
                             )}
+                            {msg.isOutbox && (
+                              <span className="text-orange-300 mr-1" title="Nachricht wird gesendet, sobald du wieder online bist">🕒</span>
+                            )}
                             <span>{formatTimestamp(msg.time)}</span>
                           </div>
                         </div>
@@ -1082,7 +1117,7 @@ export default function ChatRoomPage({ params }: PageProps) {
         </div>
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 p-3 z-10">
+      <div className="bg-slate-900 border-t border-slate-800 p-3 shrink-0">
         <form
           onSubmit={handleSendMessage}
           className="max-w-4xl mx-auto flex items-center gap-2"
