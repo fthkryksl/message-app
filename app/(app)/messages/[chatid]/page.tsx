@@ -642,7 +642,7 @@ export default function ChatRoomPage({ params }: PageProps) {
   );
 
   return (
-    <div className="flex flex-col h-screen bg-slate-950 text-white relative">
+    <div className="fixed inset-0 z-50 flex flex-col bg-slate-950 text-white overflow-hidden">
       <header className="sticky top-0 bg-slate-900 border-b border-slate-800 p-4 z-20 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-3">
           <button
@@ -737,7 +737,7 @@ export default function ChatRoomPage({ params }: PageProps) {
       <div 
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 bg-slate-950 pb-24 relative"
+        className="flex-1 overflow-y-auto p-4 space-y-4"
       >
         {loading ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-2">
@@ -1117,7 +1117,7 @@ export default function ChatRoomPage({ params }: PageProps) {
         </div>
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 p-3 z-10">
+      <div className="bg-slate-900 border-t border-slate-800 p-3 shrink-0">
         <form
           onSubmit={handleSendMessage}
           className="max-w-4xl mx-auto flex items-center gap-2"

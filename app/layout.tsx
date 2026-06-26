@@ -30,7 +30,7 @@ export default function RootLayout({
     <html
       lang="de"
       className={cn(
-        "h-full w-full",
+        "h-full w-full overflow-hidden",
         "antialiased",
         interTight.variable,
         "font-sans",
