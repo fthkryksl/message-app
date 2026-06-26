@@ -3,18 +3,40 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Instrument_Serif } from "next/font/google";
-import { Plus, Search as SearchIcon, MessageCircle, MessageSquare, AlertCircle, RefreshCw, X, Check, Users, Lock, LogOut } from "lucide-react";
-import { getChats, createChat, getInvites, joinChat, leaveChat, ChatRoom, Invite, getMessages, ChatMessage } from "@/lib/api";
+import {
+  Plus,
+  Search as SearchIcon,
+  MessageCircle,
+  MessageSquare,
+  AlertCircle,
+  RefreshCw,
+  X,
+  Check,
+  Users,
+  Lock,
+  LogOut,
+} from "lucide-react";
+import {
+  getChats,
+  createChat,
+  getInvites,
+  joinChat,
+  leaveChat,
+  ChatRoom,
+  Invite,
+  getMessages,
+  ChatMessage,
+} from "@/lib/api";
 import { getToken, getUserHash } from "@/lib/auth";
-import BlurText from "@/components/BlurText";
+import BlurText from "@/components/ReactBits/BlurText";
 
 const instrumentSerif = Instrument_Serif({ weight: "400", subsets: ["latin"] });
 
 export default function MessagesPage() {
   const router = useRouter();
+
   const [token, setToken] = useState<string | null>(null);
-  
-  // States
+
   const [chats, setChats] = useState<ChatRoom[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -26,13 +48,11 @@ export default function MessagesPage() {
   const fetchedContactNamesRef = useRef<Set<number>>(new Set());
   const isFetchingBackgroundRef = useRef(false);
 
-  // Create Chat Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newChatName, setNewChatName] = useState("");
   const [newChatIsPublic, setNewChatIsPublic] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  // Initialize
   useEffect(() => {
     const t = getToken();
     const hash = getUserHash();
@@ -44,7 +64,6 @@ export default function MessagesPage() {
     setCurrentUserHash(hash);
   }, [router]);
 
-  // Fetch Data
   const fetchData = async () => {
     if (!token) return;
     try {
@@ -62,9 +81,7 @@ export default function MessagesPage() {
 
       // Trigger background fetch for messages (non-blocking)
       fetchLatestMessagesInBackground(joinedPrivateChats);
-
     } catch (err: any) {
-      // Wir verzichten hier auf console.error, damit der Next.js Error-Overlay nicht bei jedem Polling-Fehler aufploppt
       setError("Daten konnten nicht aktualisiert werden.");
       setLoading(false);
     }
@@ -120,7 +137,6 @@ export default function MessagesPage() {
     return () => clearInterval(interval);
   }, [token]);
 
-  // Join Invite Handler
   const handleAcceptInvite = async (chatid: number) => {
     if (!token) return;
     try {
@@ -132,10 +148,11 @@ export default function MessagesPage() {
     }
   };
 
-  // Decline Invite Handler
   const handleDeclineInvite = async (chatid: number) => {
     if (!token) return;
-    const confirm = window.confirm("Möchtest du diese Einladung wirklich ablehnen?");
+    const confirm = window.confirm(
+      "Möchtest du diese Einladung wirklich ablehnen?",
+    );
     if (!confirm) return;
     try {
       await leaveChat(token, chatid);
@@ -145,7 +162,6 @@ export default function MessagesPage() {
     }
   };
 
-  // Create Chat Submit
   const handleCreateChat = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token || !newChatName.trim()) return;
@@ -153,11 +169,14 @@ export default function MessagesPage() {
     setCreating(true);
     setError(null);
     try {
-      const chatid = await createChat(token, newChatName.trim(), newChatIsPublic);
+      const chatid = await createChat(
+        token,
+        newChatName.trim(),
+        newChatIsPublic,
+      );
       setShowCreateModal(false);
       setNewChatName("");
       setNewChatIsPublic(false);
-      // Navigate straight to the new chat
       router.push(`/messages/${chatid}`);
     } catch (err: any) {
       setError(err.message ?? "Fehler beim Erstellen des Chats.");
@@ -166,14 +185,12 @@ export default function MessagesPage() {
     }
   };
 
-  // Filtered chats list
-  const filteredChats = chats.filter(chat =>
-    chat.chatname.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredChats = chats.filter((chat) =>
+    chat.chatname.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
-    <div className="w-full h-full bg-slate-950 text-white flex flex-col min-h-screen">
-      {/* Header */}
+    <div className="w-full h-full bg-slate-950 text-white flex flex-col min-h-screen overflow-x-hidden">
       <div className="sticky top-0 bg-slate-900 border-b border-slate-800 p-4 z-10 shadow-md">
         <div className="flex items-center justify-between mb-4">
           <h1 className={`${instrumentSerif.className} text-2xl font-bold`}>
@@ -194,7 +211,10 @@ export default function MessagesPage() {
               className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
               title="Aktualisieren"
             >
-              <RefreshCw size={20} className={loading ? "animate-spin text-orange-500" : ""} />
+              <RefreshCw
+                size={20}
+                className={loading ? "animate-spin text-orange-500" : ""}
+              />
             </button>
             <button
               onClick={() => setShowCreateModal(true)}
@@ -206,9 +226,11 @@ export default function MessagesPage() {
           </div>
         </div>
 
-        {/* Search Bar */}
         <div className="relative">
-          <SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <SearchIcon
+            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          />
           <input
             type="text"
             placeholder="Meine Chats durchsuchen..."
@@ -219,7 +241,6 @@ export default function MessagesPage() {
         </div>
       </div>
 
-      {/* Content Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {error && (
           <div className="p-3 bg-red-950/60 border border-red-900 rounded-xl text-red-300 text-xs flex items-center gap-2">
@@ -228,7 +249,6 @@ export default function MessagesPage() {
           </div>
         )}
 
-        {/* Pending Invites Banner */}
         {invites.length > 0 && (
           <div className="bg-slate-900 border border-orange-500/30 rounded-2xl p-4 shadow-xl space-y-3">
             <h3 className="text-sm font-semibold text-orange-500 flex items-center gap-1.5">
@@ -236,10 +256,17 @@ export default function MessagesPage() {
             </h3>
             <div className="divide-y divide-slate-800">
               {invites.map((invite) => (
-                <div key={invite.chatid} className="py-3 flex items-center justify-between gap-4 first:pt-0 last:pb-0">
+                <div
+                  key={invite.chatid}
+                  className="py-3 flex items-center justify-between gap-4 first:pt-0 last:pb-0"
+                >
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-200 truncate">{invite.chatname}</p>
-                    <p className="text-[10px] text-slate-400">Gruppe #{invite.chatid}</p>
+                    <p className="text-sm font-semibold text-slate-200 truncate">
+                      {invite.chatname}
+                    </p>
+                    <p className="text-[10px] text-slate-400">
+                      Gruppe #{invite.chatid}
+                    </p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
@@ -263,7 +290,6 @@ export default function MessagesPage() {
           </div>
         )}
 
-        {/* Chats List */}
         <div className="space-y-2">
           {loading ? (
             <div className="p-8 text-center text-slate-500 flex flex-col items-center justify-center gap-2">
@@ -347,17 +373,22 @@ export default function MessagesPage() {
             })()
           ) : (
             <div className="p-12 text-center text-slate-500 bg-slate-900/40 rounded-3xl border border-slate-900/60">
-              <MessageCircle size={32} className="mx-auto text-slate-600 mb-2" />
-              <p className="text-sm font-semibold text-slate-400">Keine Chats aktiv</p>
+              <MessageCircle
+                size={32}
+                className="mx-auto text-slate-600 mb-2"
+              />
+              <p className="text-sm font-semibold text-slate-400">
+                Keine Chats aktiv
+              </p>
               <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                Erstelle einen neuen Chat über das Plus-Symbol oben oder suche öffentliche Gruppen unter "Gruppen".
+                Erstelle einen neuen Chat über das Plus-Symbol oben oder suche
+                öffentliche Gruppen unter "Gruppen".
               </p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Create Chat Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-40 animate-in fade-in duration-200">
           <div className="w-full max-w-sm bg-slate-900 border border-slate-850 rounded-2xl shadow-2xl p-5 relative">
@@ -375,7 +406,10 @@ export default function MessagesPage() {
 
             <form onSubmit={handleCreateChat} className="space-y-4">
               <div>
-                <label htmlFor="chatname" className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                <label
+                  htmlFor="chatname"
+                  className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5"
+                >
                   Chatname
                 </label>
                 <input
@@ -391,8 +425,12 @@ export default function MessagesPage() {
 
               <div className="flex items-center justify-between py-1 border-t border-b border-slate-800">
                 <div>
-                  <span className="text-xs font-semibold text-slate-200 block">Öffentlicher Chat</span>
-                  <span className="text-[10px] text-slate-500 block">Jeder kann diesen Chat suchen und beitreten</span>
+                  <span className="text-xs font-semibold text-slate-200 block">
+                    Öffentlicher Chat
+                  </span>
+                  <span className="text-[10px] text-slate-500 block">
+                    Jeder kann diesen Chat suchen und beitreten
+                  </span>
                 </div>
                 <input
                   type="checkbox"
