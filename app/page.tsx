@@ -6,6 +6,7 @@ import { getToken } from "@/lib/auth";
 
 export default function Home() {
   const router = useRouter();
+
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

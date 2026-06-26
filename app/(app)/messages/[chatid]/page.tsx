@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, use } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   ArrowLeft,
   Send,
@@ -12,7 +13,6 @@ import {
   FileText,
   ExternalLink,
   RefreshCw,
-  AlertTriangle,
   Trash2,
   CornerUpLeft,
   X,
@@ -20,12 +20,119 @@ import {
   UserPlus,
   Compass,
   AlertCircle,
-  MessageCircle
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  ArrowDown,
+  MessageCircle,
 } from "lucide-react";
-import { getMessages, postMessage, getChats, deleteChat, leaveChat, inviteUser, getProfiles, ChatMessage, ChatRoom, UserProfile } from "@/lib/api";
+import {
+  getMessages,
+  postMessage,
+  getChats,
+  deleteChat,
+  leaveChat,
+  inviteUser,
+  getProfiles,
+  ChatMessage,
+  ChatRoom,
+  UserProfile,
+} from "@/lib/api";
 import { getToken, getUserHash } from "@/lib/auth";
-import BlurText from "@/components/BlurText";
-import DecryptedText from "@/components/DecryptedText";
+
+const LeafletMap = dynamic(() => import("@/components/LeafletMap"), {
+  ssr: false,
+  loading: () => <div className="animate-pulse" />,
+});
+
+// Formatiert Zeitstempel vom Serverformat "YYYY-MM-DD_HH-mm-ss" in ein lesbares Format
+const formatTimestamp = (timeStr: string): string => {
+  try {
+    const [datePart, timePart] = timeStr.split("_");
+    if (!datePart || !timePart) return timeStr;
+
+    const isoStr = `${datePart.replace(/-/g, "/")} ${timePart.replace(/-/g, ":")}`;
+    const date = new Date(isoStr);
+    if (isNaN(date.getTime())) return timeStr;
+
+    const now = new Date();
+    const isToday =
+      date.getDate() === now.getDate() &&
+      date.getMonth() === now.getMonth() &&
+      date.getFullYear() === now.getFullYear();
+
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday =
+      date.getDate() === yesterday.getDate() &&
+      date.getMonth() === yesterday.getMonth() &&
+      date.getFullYear() === yesterday.getFullYear();
+
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const time = `${hours}:${minutes} Uhr`;
+
+    if (isToday) {
+      return time;
+    } else if (isYesterday) {
+      return `Gestern, ${time}`;
+    } else {
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+      return `${day}.${month}.${year}, ${time}`;
+    }
+  } catch (e) {
+    return timeStr;
+  }
+};
+
+// Liefert ein Label wie "Heute", "Gestern", Wochentag oder Datum für die Gruppierung
+const getDateLabel = (timeStr: string): string => {
+  try {
+    const [datePart] = timeStr.split("_");
+    if (!datePart) return timeStr;
+    const isoStr = datePart.replace(/-/g, "/");
+    const date = new Date(isoStr);
+    if (isNaN(date.getTime())) return datePart;
+
+    const now = new Date();
+    const dDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const dNow = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const diffTime = dNow.getTime() - dDate.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return "Heute";
+    } else if (diffDays === 1) {
+      return "Gestern";
+    } else if (diffDays < 7 && diffDays > 0) {
+      return date.toLocaleDateString("de-DE", { weekday: "long" });
+    } else {
+      return date.toLocaleDateString("de-DE", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+    }
+  } catch (e) {
+    return timeStr;
+  }
+};
+
+// Formatiert GPS-Koordinaten in ein lesbares Format
+const formatCoordinates = (posStr: string): string => {
+  const [latStr, lngStr] = posStr.split(",");
+  const lat = parseFloat(latStr);
+  const lng = parseFloat(lngStr);
+  if (isNaN(lat) || isNaN(lng)) return posStr;
+
+  const latDirection = lat >= 0 ? "N" : "S";
+  const lngDirection = lng >= 0 ? "O" : "W";
+
+  return `${Math.abs(lat).toFixed(4)}° ${latDirection}, ${Math.abs(lng).toFixed(4)}° ${lngDirection}`;
+};
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -38,11 +145,9 @@ export default function ChatRoomPage({ params }: PageProps) {
   const chatid = Number(resolvedParams.chatid);
   const router = useRouter();
 
-  // Authentication State
   const [token, setToken] = useState<string | null>(null);
   const [currentUserHash, setCurrentUserHash] = useState<string | null>(null);
 
-  // Chat Metadata
   const [chatRoom, setChatRoom] = useState<ChatRoom | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
@@ -50,30 +155,39 @@ export default function ChatRoomPage({ params }: PageProps) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Input & Draft States
   const [draftText, setDraftText] = useState("");
   const [draftPhoto, setDraftPhoto] = useState<string | null>(null);
-  const [draftFile, setDraftFile] = useState<{ name: string; type: string; dataUrl: string } | null>(null);
-  const [draftLocation, setDraftLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [draftFile, setDraftFile] = useState<{
+    name: string;
+    type: string;
+    dataUrl: string;
+  } | null>(null);
+  const [draftLocation, setDraftLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [importantFlag, setImportantFlag] = useState(false);
 
-  // Camera States
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Locales & UI States
   const [gettingLocation, setGettingLocation] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteSearchTerm, setInviteSearchTerm] = useState("");
-  const [largePhotoUrl, setLargePhotoUrl] = useState<string | null>(null);
+  const [largePhotoMsgId, setLargePhotoMsgId] = useState<number | null>(null);
 
-  // Local Deleted Message IDs (stored in localStorage)
   const [deletedMsgIds, setDeletedMsgIds] = useState<number[]>([]);
+  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+  const [activeMessageMenuId, setActiveMessageMenuId] = useState<number | null>(
+    null,
+  );
+  const [hasScrolledInitial, setHasScrolledInitial] = useState(false);
+  const [showScrollDownButton, setShowScrollDownButton] = useState(false);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Refs for auto-scrolling
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -87,7 +201,27 @@ export default function ChatRoomPage({ params }: PageProps) {
   // Camera switch state
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
 
-  // 1. Initial Authentication & Parameter Loading
+  const handleTouchStart = (msgId: number) => {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    longPressTimer.current = setTimeout(() => {
+      setActiveMessageMenuId(msgId);
+    }, 600);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+  useEffect(() => {
+    const handleGlobalClick = () => {
+      setActiveMessageMenuId(null);
+    };
+    window.addEventListener("click", handleGlobalClick);
+    return () => window.removeEventListener("click", handleGlobalClick);
+  }, []);
+
   useEffect(() => {
     const t = getToken();
     const hash = getUserHash();
@@ -98,7 +232,6 @@ export default function ChatRoomPage({ params }: PageProps) {
     setToken(t);
     setCurrentUserHash(hash);
 
-    // Load deleted messages from localStorage
     try {
       const storedDeleted = localStorage.getItem(`deleted_msgs_${chatid}`);
       if (storedDeleted) {
@@ -109,14 +242,13 @@ export default function ChatRoomPage({ params }: PageProps) {
     }
   }, [chatid, router]);
 
-  // 2. Fetch Chat Metadata & Profiles
   useEffect(() => {
     if (!token) return;
 
     const fetchMetadata = async () => {
       try {
         const chats = await getChats(token);
-        const currentChat = chats.find(c => c.chatid === chatid);
+        const currentChat = chats.find((c) => c.chatid === chatid);
         if (currentChat) {
           setChatRoom(currentChat);
         }
@@ -131,7 +263,6 @@ export default function ChatRoomPage({ params }: PageProps) {
     fetchMetadata();
   }, [token, chatid]);
 
-  // 3. Fetch Messages & Setup Polling
   const fetchMessages = async () => {
     if (!token) return;
     try {
@@ -141,7 +272,6 @@ export default function ChatRoomPage({ params }: PageProps) {
       localStorage.setItem(`lastRead_${chatid}`, new Date().toISOString());
       setError(null);
     } catch (err: any) {
-      // Wir verzichten auf console.error, um den nervigen Next.js Overlay bei kurzen Verbindungsabbrüchen zu vermeiden
       setError("Verbindungsproblem. Nachrichten können veraltet sein.");
     } finally {
       setLoading(false);
@@ -161,7 +291,27 @@ export default function ChatRoomPage({ params }: PageProps) {
     return () => clearInterval(interval);
   }, [token, chatid]);
 
-  // 4. Smart Auto-Scroll to bottom when new messages load
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const container = e.currentTarget;
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    
+    const atBottom = distanceFromBottom < 50;
+    setIsAtBottom(atBottom);
+    setShowScrollDownButton(distanceFromBottom > 150);
+    
+    if (atBottom) {
+      setHasUnread(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!loading && messages.length > 0 && !hasScrolledInitial) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+      setHasScrolledInitial(true);
+    }
+  }, [loading, messages, hasScrolledInitial]);
+
   useEffect(() => {
     if (messages.length > prevMsgCountRef.current) {
       if (isAtBottom) {
@@ -171,19 +321,8 @@ export default function ChatRoomPage({ params }: PageProps) {
       }
     }
     prevMsgCountRef.current = messages.length;
-  }, [messages.length]); // Scroll only depends on new messages, not local deletions
+  }, [messages.length, isAtBottom]);
 
-  const handleScroll = () => {
-    if (!scrollContainerRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-    const atBottom = scrollHeight - scrollTop - clientHeight < 50;
-    setIsAtBottom(atBottom);
-    if (atBottom) {
-      setHasUnread(false);
-    }
-  };
-
-  // 5. Send Message Handler
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!token) return;
@@ -195,30 +334,28 @@ export default function ChatRoomPage({ params }: PageProps) {
     try {
       let finalAddressText = draftText;
 
-      // Reply formatting: » Nick: QuotedSnippet\n\nOriginalText
       if (replyingTo) {
         const snippet = replyingTo.text
           ? replyingTo.text.startsWith("[FILE:")
             ? "[Datei-Anhang]"
             : replyingTo.text.length > 40
-            ? replyingTo.text.substring(0, 40) + "..."
-            : replyingTo.text
+              ? replyingTo.text.substring(0, 40) + "..."
+              : replyingTo.text
           : replyingTo.photoid
-          ? "[Bild]"
-          : replyingTo.position
-          ? "[Standort]"
-          : "[Anhang]";
+            ? "[Bild]"
+            : replyingTo.position
+              ? "[Standort]"
+              : "[Anhang]";
         finalAddressText = `» ${replyingTo.usernick}: ${snippet}\n\n${finalAddressText}`;
       }
 
-      // PDF / Video inline base64 attachment formatting in text field
       if (draftFile) {
         finalAddressText = `[FILE:${draftFile.name}|${draftFile.type}]${draftFile.dataUrl}`;
       }
 
       const params: any = {
         chatid,
-        important: importantFlag
+        important: importantFlag,
       };
 
       if (finalAddressText) params.text = finalAddressText;
@@ -229,7 +366,6 @@ export default function ChatRoomPage({ params }: PageProps) {
 
       await postMessage(token, params);
 
-      // Reset Drafts
       setDraftText("");
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
@@ -240,8 +376,8 @@ export default function ChatRoomPage({ params }: PageProps) {
       setReplyingTo(null);
       setImportantFlag(false);
 
-      // Re-fetch
       await fetchMessages();
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     } catch (err: any) {
       setError(err.message ?? "Fehler beim Versenden der Nachricht.");
     } finally {
@@ -249,7 +385,6 @@ export default function ChatRoomPage({ params }: PageProps) {
     }
   };
 
-  // 6. Camera Activation
   const startCamera = async () => {
     setError(null);
     try {
@@ -264,14 +399,16 @@ export default function ChatRoomPage({ params }: PageProps) {
       }
     } catch (err) {
       console.error(err);
-      setError("Kamera konnte nicht gestartet werden. Bitte Berechtigungen prüfen.");
+      setError(
+        "Kamera konnte nicht gestartet werden. Bitte Berechtigungen prüfen.",
+      );
       setCameraActive(false);
     }
   };
 
   const stopCamera = () => {
     if (cameraStream) {
-      cameraStream.getTracks().forEach(track => track.stop());
+      cameraStream.getTracks().forEach((track) => track.stop());
     }
     setCameraStream(null);
     setCameraActive(false);
@@ -305,7 +442,6 @@ export default function ChatRoomPage({ params }: PageProps) {
     }
   };
 
-  // 7. Location Access
   const retrieveLocation = () => {
     if (!navigator.geolocation) {
       setError("GPS Ortung wird von diesem Browser nicht unterstützt.");
@@ -317,7 +453,7 @@ export default function ChatRoomPage({ params }: PageProps) {
       (pos) => {
         setDraftLocation({
           lat: pos.coords.latitude,
-          lng: pos.coords.longitude
+          lng: pos.coords.longitude,
         });
         setGettingLocation(false);
       },
@@ -326,11 +462,10 @@ export default function ChatRoomPage({ params }: PageProps) {
         setError("Standort konnte nicht ausgelesen werden. GPS aktiviert?");
         setGettingLocation(false);
       },
-      { enableHighAccuracy: true, timeout: 8000 }
+      { enableHighAccuracy: true, timeout: 8000 },
     );
   };
 
-  // 8. File Picker Handling
   const triggerFilePicker = () => {
     fileInputRef.current?.click();
   };
@@ -348,7 +483,6 @@ export default function ChatRoomPage({ params }: PageProps) {
     reader.onload = (evt) => {
       const result = evt.target?.result as string;
       if (file.type.startsWith("image/")) {
-        // Standardize image to a resized PNG using a canvas
         const img = new Image();
         img.onload = () => {
           const canvas = document.createElement("canvas");
@@ -374,23 +508,29 @@ export default function ChatRoomPage({ params }: PageProps) {
           }
         };
         img.src = result;
-      } else if (file.type.startsWith("video/") || file.type === "application/pdf") {
+      } else if (
+        file.type.startsWith("video/") ||
+        file.type === "application/pdf"
+      ) {
         setDraftFile({
           name: file.name,
           type: file.type,
-          dataUrl: result
+          dataUrl: result,
         });
       } else {
-        setError("Nicht unterstütztes Dateiformat. Bitte Bilder, Videos oder PDFs wählen.");
+        setError(
+          "Nicht unterstütztes Dateiformat. Bitte Bilder, Videos oder PDFs wählen.",
+        );
       }
     };
     reader.readAsDataURL(file);
   };
 
-  // 9. Leave & Delete Chat Logic
   const handleLeaveChat = async () => {
     if (!token) return;
-    const confirm = window.confirm("Möchtest du diese Gruppe wirklich verlassen?");
+    const confirm = window.confirm(
+      "Möchtest du diese Gruppe wirklich verlassen?",
+    );
     if (!confirm) return;
 
     try {
@@ -403,7 +543,9 @@ export default function ChatRoomPage({ params }: PageProps) {
 
   const handleDeleteChat = async () => {
     if (!token) return;
-    const confirm = window.confirm("Möchtest du diese Gruppe permanent LÖSCHEN?");
+    const confirm = window.confirm(
+      "Möchtest du diese Gruppe permanent LÖSCHEN?",
+    );
     if (!confirm) return;
 
     try {
@@ -414,7 +556,6 @@ export default function ChatRoomPage({ params }: PageProps) {
     }
   };
 
-  // 10. Invite User Logic
   const handleInviteUser = async (hash: string) => {
     if (!token) return;
     try {
@@ -426,7 +567,6 @@ export default function ChatRoomPage({ params }: PageProps) {
     }
   };
 
-  // 11. Delete Message Locally
   const handleDeleteMessageLocally = (id: number) => {
     const updated = [...deletedMsgIds, id];
     setDeletedMsgIds(updated);
@@ -437,14 +577,11 @@ export default function ChatRoomPage({ params }: PageProps) {
     }
   };
 
-  // 12. Helper: Check if Message is own
   const isOwnMessage = (msg: ChatMessage) => {
     if (currentUserHash && msg.userhash === currentUserHash) return true;
     return false;
   };
 
-  // 13. UI Parsers
-  // 13a. Quoted Reply Parser
   const renderQuotedReply = (text: string) => {
     const match = text.match(/^» ([^:]+): ([^\n]+)\n\n([\s\S]*)$/);
     if (!match) return { isReply: false, rawText: text };
@@ -452,22 +589,20 @@ export default function ChatRoomPage({ params }: PageProps) {
       isReply: true,
       senderNick: match[1],
       snippet: match[2],
-      cleanText: match[3]
+      cleanText: match[3],
     };
   };
 
-  // 13b. PDF/Video Parser
   const parseAttachedFile = (text: string) => {
     const match = text.match(/^\[FILE:([^|]+)\|([^\]]+)\](data:[\s\S]+)$/);
     if (!match) return null;
     return {
       name: match[1],
       type: match[2],
-      dataUrl: match[3]
+      dataUrl: match[3],
     };
   };
 
-  // 13c. Text Link Parsing
   const renderTextWithLinks = (text: string) => {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const parts = text.split(urlRegex);
@@ -489,14 +624,14 @@ export default function ChatRoomPage({ params }: PageProps) {
     });
   };
 
-  const filteredInvitableUsers = profiles.filter(p =>
-    p.nickname.toLowerCase().includes(inviteSearchTerm.toLowerCase()) &&
-    p.hash !== currentUserHash
+  const filteredInvitableUsers = profiles.filter(
+    (p) =>
+      p.nickname.toLowerCase().includes(inviteSearchTerm.toLowerCase()) &&
+      p.hash !== currentUserHash,
   );
 
   return (
     <div className="flex flex-col h-screen bg-slate-950 text-white relative">
-      {/* ── Header ── */}
       <header className="sticky top-0 bg-slate-900 border-b border-slate-800 p-4 z-20 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-3">
           <button
@@ -514,7 +649,9 @@ export default function ChatRoomPage({ params }: PageProps) {
               {chatRoom ? chatRoom.chatname : `Chat #${chatid}`}
             </h2>
             <p className="text-xs text-slate-400 flex items-center gap-1">
-              {chatRoom?.visibility === "public" ? "Öffentliche Gruppe" : "Private Unterhaltung"}
+              {chatRoom?.visibility === "public"
+                ? "Öffentliche Gruppe"
+                : "Private Unterhaltung"}
               {chatRoom?.role && (
                 <span className="bg-slate-800 text-orange-500 font-semibold px-1.5 py-0.5 rounded text-[10px] uppercase">
                   {chatRoom.role === "owner" ? "Besitzer" : chatRoom.role}
@@ -570,7 +707,6 @@ export default function ChatRoomPage({ params }: PageProps) {
         </div>
       </header>
 
-      {/* ── Error Banner ── */}
       {error && (
         <div className="bg-red-950 border-b border-red-900 text-red-300 px-4 py-2 text-xs flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 font-medium">
@@ -590,7 +726,7 @@ export default function ChatRoomPage({ params }: PageProps) {
       <div 
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-950 pb-24 relative"
+        className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 bg-slate-950 pb-24 relative"
       >
         {loading ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-2">
@@ -609,196 +745,224 @@ export default function ChatRoomPage({ params }: PageProps) {
           </div>
         ) : (
           (() => {
-            let lastDate = "";
-            const today = new Date();
-            const todayStr = today.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' });
-            const yesterday = new Date(today);
-            yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayStr = yesterday.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' });
-
+            let lastDateLabel = "";
             return messages
               .filter((msg) => !deletedMsgIds.includes(msg.id))
               .map((msg) => {
-                let msgDateStr = msg.time;
-                let msgTimeStr = msg.time;
-
-                const timeMatch = msg.time.match(/^(\d{4}-\d{2}-\d{2})_(\d{2})-(\d{2})-\d{2}$/);
-                if (timeMatch) {
-                  const [_, datePart, hour, minute] = timeMatch;
-                  const dateObj = new Date(datePart);
-                  if (!isNaN(dateObj.getTime())) {
-                    msgDateStr = dateObj.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' });
-                  } else {
-                    msgDateStr = datePart;
-                  }
-                  msgTimeStr = `${hour}:${minute}`;
-                } else {
-                  const dateObj = new Date(msg.time.replace(' ', 'T'));
-                  if (!isNaN(dateObj.getTime())) {
-                    msgDateStr = dateObj.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' });
-                    msgTimeStr = dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-                  }
-                }
-
-                const showDateSeparator = msgDateStr !== lastDate && msgDateStr !== 'Invalid Date';
-                if (showDateSeparator) lastDate = msgDateStr;
-
                 const isOwn = isOwnMessage(msg);
                 const textContent = msg.text || "";
                 const replyInfo = renderQuotedReply(textContent);
-                const fileAttachment = parseAttachedFile((replyInfo.isReply ? replyInfo.cleanText : textContent) || "");
+                const fileAttachment = parseAttachedFile(
+                  (replyInfo.isReply ? replyInfo.cleanText : textContent) || "",
+                );
+
+                const dateLabel = getDateLabel(msg.time);
+                const showDateSeparator = dateLabel !== lastDateLabel;
+                lastDateLabel = dateLabel;
 
                 return (
                   <React.Fragment key={msg.id}>
                     {showDateSeparator && (
-                      <div className="flex items-center justify-center my-6">
-                        <div className="bg-slate-800/80 text-slate-400 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-sm border border-slate-700/50">
-                          {msgDateStr === todayStr ? "Heute" : msgDateStr === yesterdayStr ? "Gestern" : msgDateStr}
-                        </div>
+                      <div className="sticky top-2 z-10 flex justify-center my-2 w-full select-none pointer-events-none">
+                        <span className="bg-slate-850/95 text-zinc-400 dark:text-zinc-300 text-xs font-semibold px-4 py-1.5 rounded-full shadow-md backdrop-blur-md border border-zinc-200/50 dark:border-slate-700/50 pointer-events-auto">
+                          {dateLabel}
+                        </span>
                       </div>
                     )}
                     <div
                       className={`flex flex-col ${isOwn ? "items-end" : "items-start"} group relative`}
+                      onTouchStart={() => handleTouchStart(msg.id)}
+                      onTouchEnd={handleTouchEnd}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setActiveMessageMenuId(msg.id);
+                      }}
                     >
-                  {/* Sender Nickname */}
-                  {!isOwn && (
-                    <span className="text-xs text-slate-400 mb-1 ml-2 font-medium">
-                      {msg.usernick}
-                    </span>
-                  )}
-
-                  {/* Message Bubble Container */}
-                  <div className="max-w-[85%] sm:max-w-md relative">
-                    <div
-                      className={`rounded-2xl p-3.5 shadow-sm text-sm relative transition-all ${
-                        msg.important ? "ring-2 ring-red-500 border border-red-500" : ""
-                      } ${
-                        isOwn
-                          ? "bg-gradient-to-tr from-orange-600 to-orange-500 text-white rounded-tr-none"
-                          : "bg-slate-900 text-slate-100 rounded-tl-none border border-slate-800"
-                      }`}
-                    >
-                      {/* Replying indicator */}
-                      {replyInfo.isReply && (
-                        <div className="bg-black/20 border-l-2 border-orange-400 pl-2 py-1 mb-2 rounded-r text-xs text-slate-200">
-                          <p className="font-semibold text-[10px] text-orange-300">
-                            Quittiert @{replyInfo.senderNick}
-                          </p>
-                          <p className="truncate italic">{replyInfo.snippet}</p>
-                        </div>
+                      {!isOwn && (
+                        <span className="text-xs text-slate-400 mb-1 ml-2 font-medium">
+                          {msg.usernick}
+                        </span>
                       )}
 
-                      {/* Display Image attachment (Server photo via photoid) */}
-                      {msg.photoid && (
-                        <div className="mb-2 rounded-lg overflow-hidden border border-black/10 bg-slate-950 cursor-pointer group/photo relative max-w-full">
-                          <img
-                            src={`${BASE_URL}?request=getphoto&token=${token}&photoid=${msg.photoid}`}
-                            alt="Gesendetes Bild"
-                            className="max-h-60 w-full object-cover group-hover/photo:scale-102 transition-transform duration-200"
-                            onClick={() => setLargePhotoUrl(`${BASE_URL}?request=getphoto&token=${token}&photoid=${msg.photoid}`)}
-                          />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/photo:opacity-100 flex items-center justify-center transition-opacity text-xs font-medium">
-                            Bild vergrößern
-                          </div>
-                        </div>
-                      )}
+                      <div className="max-w-[85%] sm:max-w-md relative">
+                        <div
+                          className={`rounded-2xl p-3.5 shadow-sm text-sm relative transition-all ${
+                            msg.important
+                              ? "ring-2 ring-red-500 border border-red-500"
+                              : ""
+                          } ${
+                            isOwn
+                              ? "bg-gradient-to-tr from-orange-600 to-orange-500 text-white rounded-tr-none"
+                              : "bg-slate-900 text-slate-100 rounded-tl-none border border-slate-800"
+                          }`}
+                        >
+                          {replyInfo.isReply && (
+                            <div className="bg-black/20 border-l-2 border-orange-400 pl-2 py-1 mb-2 rounded-r text-xs text-slate-200">
+                              <p className="font-semibold text-[10px] text-orange-300">
+                                Quittiert @{replyInfo.senderNick}
+                              </p>
+                              <p className="truncate italic">
+                                {replyInfo.snippet}
+                              </p>
+                            </div>
+                          )}
 
-                      {/* Display PDF or Video attachment from base64 string */}
-                      {fileAttachment && (
-                        <div className="mb-2 rounded-lg overflow-hidden border border-slate-800 bg-slate-950 p-2">
-                          {fileAttachment.type.startsWith("video/") ? (
-                            <video
-                              src={fileAttachment.dataUrl}
-                              controls
-                              playsInline
-                              className="max-h-60 w-full rounded-md object-contain bg-black"
-                            />
-                          ) : (
-                            <div className="flex items-center justify-between gap-3 p-1">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <FileText className="text-orange-400 shrink-0" size={24} />
-                                <div className="min-w-0">
-                                  <p className="text-xs font-semibold truncate text-slate-200">
-                                    {fileAttachment.name}
-                                  </p>
-                                  <p className="text-[10px] text-slate-400">PDF Dokument</p>
-                                </div>
+                          {msg.photoid && (
+                            <div
+                              className="mb-2 rounded-lg overflow-hidden border border-black/10 bg-slate-950 cursor-pointer group/photo relative max-w-full"
+                              onClick={() => setLargePhotoMsgId(msg.id)}
+                            >
+                              <img
+                                src={`${BASE_URL}?request=getphoto&token=${token}&photoid=${msg.photoid}`}
+                                alt="Gesendetes Bild"
+                                className="max-h-60 w-full object-cover group-hover/photo:scale-102 transition-transform duration-200"
+                              />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/photo:opacity-100 flex items-center justify-center transition-opacity text-xs font-medium pointer-events-none">
+                                Bild vergrößern
                               </div>
-                              <a
-                                href={fileAttachment.dataUrl}
-                                download={fileAttachment.name}
-                                className="p-2 bg-slate-800 hover:bg-slate-700 rounded-full text-slate-300 hover:text-white transition-colors"
-                                aria-label="PDF herunterladen"
-                              >
-                                <Download size={16} />
-                              </a>
                             </div>
                           )}
-                        </div>
-                      )}
 
-                      {/* Display Location coordinates */}
-                      {msg.position && (
-                        <div className="mb-2 bg-slate-950 border border-slate-800 rounded-lg p-2.5 flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-2">
-                            <MapPin className="text-orange-500 animate-pulse shrink-0" size={20} />
-                            <div>
-                              <p className="text-xs font-semibold text-slate-200">Standort geteilt</p>
-                              <p className="text-[10px] text-slate-400 truncate max-w-[140px] sm:max-w-xs">{msg.position}</p>
+                          {fileAttachment && (
+                            <div className="mb-2 rounded-lg overflow-hidden border border-slate-800 bg-slate-950 p-2">
+                              {fileAttachment.type.startsWith("video/") ? (
+                                <video
+                                  src={fileAttachment.dataUrl}
+                                  controls
+                                  playsInline
+                                  className="max-h-60 w-full rounded-md object-contain bg-black"
+                                />
+                              ) : (
+                                <div className="flex items-center justify-between gap-3 p-1">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <FileText
+                                      className="text-orange-400 shrink-0"
+                                      size={24}
+                                    />
+                                    <div className="min-w-0">
+                                      <p className="text-xs font-semibold truncate text-slate-200">
+                                        {fileAttachment.name}
+                                      </p>
+                                      <p className="text-[10px] text-slate-400">
+                                        PDF Dokument
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <a
+                                    href={fileAttachment.dataUrl}
+                                    download={fileAttachment.name}
+                                    className="p-2 bg-slate-800 hover:bg-slate-700 rounded-full text-slate-300 hover:text-white transition-colors"
+                                    aria-label="PDF herunterladen"
+                                  >
+                                    <Download size={16} />
+                                  </a>
+                                </div>
+                              )}
                             </div>
+                          )}
+
+                          {msg.position && (
+                            <a
+                              href={`https://maps.apple.com/?q=${msg.position}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mb-2 rounded-lg p-2 flex flex-col gap-2 min-w-[220px] sm:min-w-[280px] hover:border-slate-900/50 transition-colors cursor-pointer group/map block"
+                            >
+                              <div className="flex items-center justify-between gap-4 p-0.5">
+                                <div className="flex items-center gap-2">
+                                  <MapPin
+                                    className="animate-pulse shrink-0"
+                                    size={20}
+                                  />
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-semibold text-slate-200">
+                                      Standort geteilt
+                                    </p>
+                                    <p className="text-[10px] text-slate-300 truncate max-w-[120px] sm:max-w-xs">
+                                      {formatCoordinates(msg.position)}
+                                    </p>
+                                  </div>
+                                </div>
+                                <ExternalLink
+                                  size={12}
+                                  className="text-slate-300 group-hover/map:text-white transition-colors"
+                                />
+                              </div>
+                              <div className="pointer-events-none">
+                                <LeafletMap position={msg.position} />
+                              </div>
+                            </a>
+                          )}
+
+                          {(!fileAttachment ||
+                            (
+                              (replyInfo.isReply
+                                ? replyInfo.cleanText
+                                : textContent) || ""
+                            ).trim().length > 0) && (
+                            <p className="break-words whitespace-pre-wrap leading-relaxed">
+                              {renderTextWithLinks(
+                                fileAttachment
+                                  ? ""
+                                  : (replyInfo.isReply
+                                      ? replyInfo.cleanText
+                                      : textContent) || "",
+                              )}
+                            </p>
+                          )}
+
+                          <div className="flex items-center justify-end gap-1 mt-1 text-[10px] opacity-70">
+                            {msg.important && (
+                              <span className="text-[9px] font-bold tracking-wide uppercase mr-1">
+                                Dringend
+                              </span>
+                            )}
+                            <span>{formatTimestamp(msg.time)}</span>
                           </div>
-                          <a
-                            href={`https://www.google.com/maps?q=${msg.position}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded text-[11px] font-medium flex items-center gap-1 transition-colors"
-                          >
-                            Karte <ExternalLink size={10} />
-                          </a>
                         </div>
-                      )}
 
-                      {/* Render text with resolved URLs */}
-                      {(!fileAttachment || ((replyInfo.isReply ? replyInfo.cleanText : textContent) || "").trim().length > 0) && (
-                        <p className="break-words whitespace-pre-wrap leading-relaxed">
-                          {renderTextWithLinks(
-                            fileAttachment
-                              ? ""
-                              : (replyInfo.isReply ? replyInfo.cleanText : textContent) || ""
-                          )}
-                        </p>
-                      )}
-
-                      {/* Info Bar inside Bubble */}
-                      <div className="flex items-center justify-end gap-1 mt-1 text-[10px] opacity-70">
-                        {msg.important && <span className="text-[9px] font-bold tracking-wide uppercase mr-1">Dringend</span>}
-                        <span>{msgTimeStr}</span>
+                        <div
+                          className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1.5 transition-all duration-200 z-10 bg-slate-950/95 rounded-full py-1 px-2 border border-slate-800 shadow-md ${
+                            isOwn
+                              ? "right-full -translate-x-2"
+                              : "left-full translate-x-2"
+                          } ${
+                            activeMessageMenuId === msg.id
+                              ? "opacity-100 scale-105 pointer-events-auto"
+                              : "opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
+                          }`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            onClick={() => {
+                              setReplyingTo(msg);
+                              setActiveMessageMenuId(null);
+                            }}
+                            className="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-orange-400 rounded-full transition-colors cursor-pointer"
+                            title="Antworten"
+                            type="button"
+                          >
+                            <CornerUpLeft size={14} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleDeleteMessageLocally(msg.id);
+                              setActiveMessageMenuId(null);
+                            }}
+                            className="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-red-400 rounded-full transition-colors cursor-pointer"
+                            title="Löschen"
+                            type="button"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
                     </div>
-
-                    {/* Hover Actions Panel */}
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2 -translate-x-full pr-2 opacity-0 group-hover:opacity-100 flex items-center gap-1.5 transition-opacity z-10 bg-slate-950/80 rounded-full py-1 px-2 border border-slate-800/80 shadow-md">
-                      <button
-                        onClick={() => setReplyingTo(msg)}
-                        className="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-orange-400 rounded-full transition-colors"
-                        title="Antworten"
-                      >
-                        <CornerUpLeft size={14} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteMessageLocally(msg.id)}
-                        className="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-red-400 rounded-full transition-colors"
-                        title="Löschen"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </React.Fragment>
-            );
-          });
-        })()
+                  </React.Fragment>
+                );
+              });
+          })()
         )}
         
         {hasUnread && (
@@ -817,11 +981,22 @@ export default function ChatRoomPage({ params }: PageProps) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* ── Draft Previews ── */}
+      {showScrollDownButton && (
+        <button
+          onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })}
+          className="absolute bottom-24 right-4 z-20 bg-orange-600 hover:bg-orange-500 text-white rounded-full py-2 px-3.5 shadow-lg flex items-center gap-1.5 text-xs font-semibold cursor-pointer transition-all hover:scale-105 active:scale-95 animate-in fade-in duration-200"
+          type="button"
+        >
+          <ArrowDown size={14} /> Nach unten
+        </button>
+      )}
+
       {(replyingTo || draftPhoto || draftFile || draftLocation) && (
         <div className="absolute bottom-20 left-4 right-4 bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-2xl z-10 space-y-2 flex flex-col">
           <div className="flex justify-between items-center pb-1.5 border-b border-slate-800">
-            <h4 className="text-xs font-semibold text-orange-500 uppercase tracking-wider">Entwurf / Vorschau</h4>
+            <h4 className="text-xs font-semibold text-orange-500 uppercase tracking-wider">
+              Entwurf / Vorschau
+            </h4>
             <button
               onClick={() => {
                 setReplyingTo(null);
@@ -835,21 +1010,32 @@ export default function ChatRoomPage({ params }: PageProps) {
             </button>
           </div>
 
-          {/* Reply Quote Preview */}
           {replyingTo && (
             <div className="bg-slate-950 p-2 rounded-lg border-l-2 border-orange-500 flex items-center justify-between text-xs text-slate-300">
               <div>
-                <span className="font-semibold text-orange-400">Antwort an {replyingTo.usernick}:</span>
-                <p className="truncate italic max-w-xs">{replyingTo.text || "[Datei/Bild]"}</p>
+                <span className="font-semibold text-orange-400">
+                  Antwort an {replyingTo.usernick}:
+                </span>
+                <p className="truncate italic max-w-xs">
+                  {replyingTo.text || "[Datei/Bild]"}
+                </p>
               </div>
-              <button onClick={() => setReplyingTo(null)} className="text-slate-500 hover:text-slate-300">Entfernen</button>
+              <button
+                onClick={() => setReplyingTo(null)}
+                className="text-slate-500 hover:text-slate-300"
+              >
+                Entfernen
+              </button>
             </div>
           )}
 
-          {/* Photo attachment draft */}
           {draftPhoto && (
             <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-slate-800 self-start">
-              <img src={draftPhoto} alt="Kamera Vorschau" className="w-full h-full object-cover" />
+              <img
+                src={draftPhoto}
+                alt="Kamera Vorschau"
+                className="w-full h-full object-cover"
+              />
               <button
                 onClick={() => setDraftPhoto(null)}
                 className="absolute top-1 right-1 p-0.5 bg-black/60 rounded-full text-white hover:bg-black/90 transition-colors"
@@ -859,34 +1045,48 @@ export default function ChatRoomPage({ params }: PageProps) {
             </div>
           )}
 
-          {/* PDF or Video draft */}
           {draftFile && (
             <div className="flex items-center justify-between bg-slate-950 p-2 rounded-lg border border-slate-800 text-xs">
               <div className="flex items-center gap-2 min-w-0">
                 <FileText className="text-orange-500" size={18} />
-                <span className="truncate max-w-xs text-slate-300 font-medium">{draftFile.name}</span>
+                <span className="truncate max-w-xs text-slate-300 font-medium">
+                  {draftFile.name}
+                </span>
               </div>
-              <button onClick={() => setDraftFile(null)} className="text-slate-500 hover:text-slate-300 text-xs font-semibold">Entfernen</button>
+              <button
+                onClick={() => setDraftFile(null)}
+                className="text-slate-500 hover:text-slate-300 text-xs font-semibold"
+              >
+                Entfernen
+              </button>
             </div>
           )}
 
-          {/* Location coordinate draft */}
           {draftLocation && (
             <div className="flex items-center justify-between bg-slate-950 p-2 rounded-lg border border-slate-800 text-xs">
               <div className="flex items-center gap-2">
                 <Compass className="text-orange-500 shrink-0" size={18} />
-                <span className="text-slate-300">GPS Koordinaten: {draftLocation.lat.toFixed(5)}, {draftLocation.lng.toFixed(5)}</span>
+                <span className="text-slate-300">
+                  GPS Koordinaten: {draftLocation.lat.toFixed(5)},{" "}
+                  {draftLocation.lng.toFixed(5)}
+                </span>
               </div>
-              <button onClick={() => setDraftLocation(null)} className="text-slate-500 hover:text-slate-300 text-xs font-semibold">Entfernen</button>
+              <button
+                onClick={() => setDraftLocation(null)}
+                className="text-slate-500 hover:text-slate-300 text-xs font-semibold"
+              >
+                Entfernen
+              </button>
             </div>
           )}
         </div>
       )}
 
-      {/* ── Input Bar ── */}
       <div className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 p-3 z-10">
-        <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto flex items-center gap-2">
-          {/* File input (Hidden) */}
+        <form
+          onSubmit={handleSendMessage}
+          className="max-w-4xl mx-auto flex items-center gap-2"
+        >
           <input
             type="file"
             ref={fileInputRef}
@@ -895,38 +1095,64 @@ export default function ChatRoomPage({ params }: PageProps) {
             accept="image/*,video/*,application/pdf"
           />
 
-          {/* Add media button */}
-          <button
-            type="button"
-            onClick={triggerFilePicker}
-            className="p-2.5 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors"
-            title="Medien anhängen (PDF, Video, Foto)"
-          >
-            <Paperclip size={20} />
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+              className={`p-2.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-all cursor-pointer ${
+                showAttachmentMenu
+                  ? "rotate-45 text-orange-500 bg-slate-850"
+                  : ""
+              }`}
+              title="Anhänge"
+            >
+              <Plus size={20} />
+            </button>
 
-          {/* Camera button */}
-          <button
-            type="button"
-            onClick={startCamera}
-            className="p-2.5 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors"
-            title="Kamera starten"
-          >
-            <CameraIcon size={20} />
-          </button>
+            {showAttachmentMenu && (
+              <div className="absolute bottom-14 left-0 bg-slate-900 border border-slate-800 rounded-2xl p-2 shadow-2xl flex flex-col gap-2 z-20 min-w-[150px] animate-in slide-in-from-bottom-5 fade-in duration-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerFilePicker();
+                    setShowAttachmentMenu(false);
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer w-full text-left"
+                >
+                  <Paperclip size={16} className="text-orange-500" />
+                  <span>Datei / Foto</span>
+                </button>
 
-          {/* Location button */}
-          <button
-            type="button"
-            onClick={retrieveLocation}
-            disabled={gettingLocation}
-            className={`p-2.5 hover:bg-slate-800 rounded-full transition-colors ${
-              gettingLocation ? "text-orange-500 animate-spin" : "text-slate-400 hover:text-white"
-            }`}
-            title="Standort ermitteln"
-          >
-            <MapPin size={20} />
-          </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    startCamera();
+                    setShowAttachmentMenu(false);
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer w-full text-left"
+                >
+                  <CameraIcon size={16} className="text-orange-500" />
+                  <span>Kamera</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    retrieveLocation();
+                    setShowAttachmentMenu(false);
+                  }}
+                  disabled={gettingLocation}
+                  className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer w-full text-left disabled:opacity-50"
+                >
+                  <MapPin
+                    size={16}
+                    className={`text-orange-500 ${gettingLocation ? "animate-spin" : ""}`}
+                  />
+                  <span>Standort</span>
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Text Input */}
           <textarea
@@ -950,7 +1176,6 @@ export default function ChatRoomPage({ params }: PageProps) {
             style={{ minHeight: "44px", maxHeight: "120px" }}
           />
 
-          {/* Mark as Important toggle */}
           <button
             type="button"
             onClick={() => setImportantFlag(!importantFlag)}
@@ -964,10 +1189,12 @@ export default function ChatRoomPage({ params }: PageProps) {
             Dringend
           </button>
 
-          {/* Send button */}
           <button
             type="submit"
-            disabled={sending || (!draftText && !draftPhoto && !draftFile && !draftLocation)}
+            disabled={
+              sending ||
+              (!draftText && !draftPhoto && !draftFile && !draftLocation)
+            }
             className="p-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-full transition-colors disabled:bg-slate-800 disabled:text-slate-600 cursor-pointer shrink-0"
             title="Senden"
           >
@@ -976,7 +1203,6 @@ export default function ChatRoomPage({ params }: PageProps) {
         </form>
       </div>
 
-      {/* ── Camera Interface Overlay ── */}
       {cameraActive && (
         <div className="absolute inset-0 bg-black z-50 flex flex-col items-center justify-between p-4">
           <div className="w-full flex justify-between items-center text-sm font-semibold text-slate-400">
@@ -1018,7 +1244,6 @@ export default function ChatRoomPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* ── Invite User Modal ── */}
       {showInviteModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-40 animate-in fade-in duration-200">
           <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-5 relative">
@@ -1044,13 +1269,22 @@ export default function ChatRoomPage({ params }: PageProps) {
 
             <div className="max-h-60 overflow-y-auto divide-y divide-slate-800">
               {filteredInvitableUsers.length === 0 ? (
-                <p className="text-xs text-slate-500 text-center py-4">Keine passenden Nutzer gefunden.</p>
+                <p className="text-xs text-slate-500 text-center py-4">
+                  Keine passenden Nutzer gefunden.
+                </p>
               ) : (
                 filteredInvitableUsers.map((user) => (
-                  <div key={user.hash} className="py-2.5 flex items-center justify-between gap-4">
+                  <div
+                    key={user.hash}
+                    className="py-2.5 flex items-center justify-between gap-4"
+                  >
                     <div>
-                      <p className="text-sm font-semibold text-slate-200">@{user.nickname}</p>
-                      <p className="text-[10px] text-slate-500 truncate max-w-[150px]">{user.hash}</p>
+                      <p className="text-sm font-semibold text-slate-200">
+                        @{user.nickname}
+                      </p>
+                      <p className="text-[10px] text-slate-500 truncate max-w-[150px]">
+                        {user.hash}
+                      </p>
                     </div>
                     <button
                       onClick={() => handleInviteUser(user.hash)}
@@ -1066,25 +1300,84 @@ export default function ChatRoomPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* ── Photo Lightbox Modal ── */}
-      {largePhotoUrl && (
-        <div
-          className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4 cursor-zoom-out"
-          onClick={() => setLargePhotoUrl(null)}
-        >
-          <button
-            onClick={() => setLargePhotoUrl(null)}
-            className="absolute top-4 right-4 p-2 bg-slate-900 rounded-full text-slate-400 hover:text-white"
-          >
-            <X size={20} />
-          </button>
-          <img
-            src={largePhotoUrl}
-            alt="Maximiertes Bild"
-            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-200"
-          />
-        </div>
-      )}
+      {largePhotoMsgId !== null &&
+        (() => {
+          const photoMessages = messages.filter(
+            (m) => m.photoid && !deletedMsgIds.includes(m.id),
+          );
+          const currentIndex = photoMessages.findIndex(
+            (m) => m.id === largePhotoMsgId,
+          );
+          const currentMsg = photoMessages[currentIndex];
+          if (!currentMsg) return null;
+
+          const largePhotoUrlVal = `${BASE_URL}?request=getphoto&token=${token}&photoid=${currentMsg.photoid}`;
+
+          const handlePrevPhoto = (e: React.MouseEvent) => {
+            e.stopPropagation();
+            if (currentIndex > 0) {
+              setLargePhotoMsgId(photoMessages[currentIndex - 1].id);
+            }
+          };
+
+          const handleNextPhoto = (e: React.MouseEvent) => {
+            e.stopPropagation();
+            if (currentIndex < photoMessages.length - 1) {
+              setLargePhotoMsgId(photoMessages[currentIndex + 1].id);
+            }
+          };
+
+          return (
+            <div
+              className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4 cursor-zoom-out select-none"
+              onClick={() => setLargePhotoMsgId(null)}
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setLargePhotoMsgId(null)}
+                className="absolute top-4 right-4 p-2.5 bg-slate-900/80 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors cursor-pointer z-10"
+                title="Schließen"
+              >
+                <X size={20} />
+              </button>
+
+              {/* Left Control Chevron */}
+              {currentIndex > 0 && (
+                <button
+                  onClick={handlePrevPhoto}
+                  className="absolute left-4 p-3 bg-slate-900/80 hover:bg-slate-800 rounded-full text-slate-300 hover:text-white transition-all cursor-pointer z-10 hover:scale-105 active:scale-95"
+                  title="Vorheriges Bild"
+                >
+                  <ChevronLeft size={28} />
+                </button>
+              )}
+
+              {/* Maximized Image */}
+              <img
+                src={largePhotoUrlVal}
+                alt="Maximiertes Bild"
+                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-200"
+                onClick={(e) => e.stopPropagation()}
+              />
+
+              {/* Right Control Chevron */}
+              {currentIndex < photoMessages.length - 1 && (
+                <button
+                  onClick={handleNextPhoto}
+                  className="absolute right-4 p-3 bg-slate-900/80 hover:bg-slate-800 rounded-full text-slate-300 hover:text-white transition-all cursor-pointer z-10 hover:scale-105 active:scale-95"
+                  title="Nächstes Bild"
+                >
+                  <ChevronRight size={28} />
+                </button>
+              )}
+
+              {/* Image Counter Indicator */}
+              <div className="absolute bottom-6 bg-slate-900/80 text-zinc-300 text-xs font-semibold px-4 py-2 rounded-full border border-slate-850 shadow-lg">
+                Bild {currentIndex + 1} von {photoMessages.length}
+              </div>
+            </div>
+          );
+        })()}
     </div>
   );
 }

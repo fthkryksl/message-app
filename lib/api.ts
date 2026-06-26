@@ -54,9 +54,15 @@ export async function register(
   userid: string,
   password: string,
   nickname: string,
-  fullname: string
+  fullname: string,
 ): Promise<AuthResponse> {
-  const url = buildUrl({ request: "register", userid, password, nickname, fullname });
+  const url = buildUrl({
+    request: "register",
+    userid,
+    password,
+    nickname,
+    fullname,
+  });
   const res = await fetch(url, { cache: "no-store" });
 
   const data = await res.json().catch(() => ({}));
@@ -70,7 +76,7 @@ export async function register(
 // Login
 export async function login(
   userid: string,
-  password: string
+  password: string,
 ): Promise<AuthResponse> {
   const url = buildUrl({ request: "login", userid, password });
   const res = await fetch(url, { cache: "no-store" });
@@ -112,7 +118,7 @@ export async function deregister(token: string): Promise<void> {
 export async function getMessages(
   token: string,
   chatid?: number,
-  fromid?: number
+  fromid?: number,
 ): Promise<ChatMessage[]> {
   const params: Record<string, string> = { request: "getmessages", token };
   if (chatid !== undefined) params.chatid = String(chatid);
@@ -138,7 +144,7 @@ export async function postMessage(
     position?: string;
     chatid?: number;
     important?: boolean;
-  }
+  },
 ): Promise<void> {
   const res = await fetch(BASE_URL || "", {
     method: "POST",
@@ -178,9 +184,14 @@ export async function getChats(token: string): Promise<ChatRoom[]> {
 export async function createChat(
   token: string,
   chatname: string,
-  ispublic: boolean = false
+  ispublic: boolean = false,
 ): Promise<number> {
-  const url = buildUrl({ request: "createchat", token, chatname, ispublic: String(ispublic) });
+  const url = buildUrl({
+    request: "createchat",
+    token,
+    chatname,
+    ispublic: String(ispublic),
+  });
   const res = await fetch(url, { cache: "no-store" });
 
   const data = await res.json().catch(() => ({}));
@@ -193,7 +204,11 @@ export async function createChat(
 
 // Delete Chat
 export async function deleteChat(token: string, chatid: number): Promise<void> {
-  const url = buildUrl({ request: "deletechat", token, chatid: String(chatid) });
+  const url = buildUrl({
+    request: "deletechat",
+    token,
+    chatid: String(chatid),
+  });
   const res = await fetch(url, { cache: "no-store" });
 
   const data = await res.json().catch(() => ({}));
@@ -256,9 +271,14 @@ export async function getInvites(token: string): Promise<Invite[]> {
 export async function inviteUser(
   token: string,
   chatid: number,
-  invitedhash: string
+  invitedhash: string,
 ): Promise<void> {
-  const url = buildUrl({ request: "invite", token, chatid: String(chatid), invitedhash });
+  const url = buildUrl({
+    request: "invite",
+    token,
+    chatid: String(chatid),
+    invitedhash,
+  });
   const res = await fetch(url, { cache: "no-store" });
 
   const data = await res.json().catch(() => ({}));
