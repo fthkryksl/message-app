@@ -60,7 +60,7 @@ export default function ChatInfoPage({ params }: PageProps) {
           setMessages(msgs);
         }
       } catch (err) {
-        console.error(err);
+        // Fehler ignorieren
       } finally {
         setLoading(false);
       }

@@ -53,7 +53,7 @@ export default function ProfilePage() {
           }
         }
       } catch (err) {
-        console.error("Fehler beim Laden des Profils", err);
+        // console.error entfernt, damit das Next.js Error-Overlay bei kurzen Verbindungsabbrüchen nicht auftaucht
       } finally {
         setLoadingProfile(false);
       }

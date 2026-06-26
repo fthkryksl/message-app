@@ -67,7 +67,7 @@ export default function SearchPage() {
       setGroups(publicGroups);
       setError(null);
     } catch (err: any) {
-      console.error(err);
+      // Fehler ignorieren
       setError("Daten konnten nicht geladen werden.");
     } finally {
       setLoading(false);
@@ -90,10 +90,8 @@ export default function SearchPage() {
       await inviteUser(token, chatid, user.hash);
       router.push(`/messages/${chatid}`);
     } catch (err: any) {
-      console.error(err);
-      setError(
-        err.message ?? `Kanalerstellung mit ${user.nickname} fehlgeschlagen.`,
-      );
+      // Fehler ignorieren
+      setError(err.message ?? `Kanalerstellung mit ${user.nickname} fehlgeschlagen.`);
       setActionLoadingId(null);
     }
   };
@@ -112,7 +110,7 @@ export default function SearchPage() {
       await joinChat(token, group.chatid);
       router.push(`/messages/${group.chatid}`);
     } catch (err: any) {
-      console.error(err);
+      // Fehler ignorieren
       setError(err.message ?? `Beitritt zu ${group.chatname} fehlgeschlagen.`);
       setActionLoadingId(null);
     }

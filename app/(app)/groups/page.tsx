@@ -56,10 +56,12 @@ export default function GroupsPage() {
     if (!token) return;
     try {
       const chats = await getChats(token);
-      setGroups(chats);
+      // Gruppen-Reiter zeigt nur öffentliche Chats (Gruppen)
+      const publicGroups = chats.filter(c => c.visibility === "public");
+      setGroups(publicGroups);
       setError(null);
     } catch (err: any) {
-      console.error(err);
+      // Wir verzichten auf console.error, damit der Next.js Error-Overlay nicht bei kurzen Verbindungsfehlern aufploppt
       setError("Fehler beim Laden der Gruppen.");
     } finally {
       setLoading(false);
@@ -69,8 +71,8 @@ export default function GroupsPage() {
   useEffect(() => {
     if (!token) return;
     fetchGroups();
-
-    const interval = setInterval(fetchGroups, 10000);
+    // Auto-poll groups list every 15 seconds
+    const interval = setInterval(fetchGroups, 15000);
     return () => clearInterval(interval);
   }, [token]);
 
