@@ -1,0 +1,15 @@
+{
+  "name": "Talks",
+  "short_name": "Talks",
+  "start_url": "/messages",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#f97316",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
