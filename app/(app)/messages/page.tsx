@@ -132,8 +132,8 @@ export default function MessagesPage() {
     if (!token) return;
     fetchData();
     
-    // Auto-poll overview lists every 30 seconds to reduce server load
-    const interval = setInterval(fetchData, 30000);
+    // Auto-poll overview lists every 60 seconds to reduce server load
+    const interval = setInterval(fetchData, 60000);
     return () => clearInterval(interval);
   }, [token]);
 

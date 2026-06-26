@@ -39,6 +39,7 @@ import {
   UserProfile,
 } from "@/lib/api";
 import { getToken, getUserHash } from "@/lib/auth";
+import { getOutboxForChat, OutboxMessage } from "@/lib/db";
 
 const LeafletMap = dynamic(() => import("@/components/LeafletMap"), {
   ssr: false,
@@ -150,6 +151,7 @@ export default function ChatRoomPage({ params }: PageProps) {
 
   const [chatRoom, setChatRoom] = useState<ChatRoom | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [outboxMessages, setOutboxMessages] = useState<OutboxMessage[]>([]);
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -267,7 +269,11 @@ export default function ChatRoomPage({ params }: PageProps) {
     if (!token) return;
     try {
       const msgs = await getMessages(token, chatid);
-      setMessages(msgs);
+      setMessages(current => {
+        if (msgs.length === 0 && current.length > 0) return current;
+        if (JSON.stringify(current) === JSON.stringify(msgs)) return current;
+        return msgs;
+      });
       // "Zuletzt gelesen" für diesen Chat aktualisieren
       localStorage.setItem(`lastRead_${chatid}`, new Date().toISOString());
       setError(null);
@@ -276,6 +282,11 @@ export default function ChatRoomPage({ params }: PageProps) {
     } finally {
       setLoading(false);
     }
+
+    try {
+      const outbox = await getOutboxForChat(chatid);
+      setOutboxMessages(outbox);
+    } catch (e) {}
   };
 
   useEffect(() => {
@@ -283,10 +294,10 @@ export default function ChatRoomPage({ params }: PageProps) {
 
     fetchMessages();
 
-    // Set up polling interval every 5 seconds
+    // Set up polling interval every 20 seconds
     const interval = setInterval(() => {
       fetchMessages();
-    }, 5000);
+    }, 20000);
 
     return () => clearInterval(interval);
   }, [token, chatid]);
@@ -746,7 +757,28 @@ export default function ChatRoomPage({ params }: PageProps) {
         ) : (
           (() => {
             let lastDateLabel = "";
-            return messages
+            const displayMessages: (ChatMessage & { isOutbox?: boolean })[] = [
+              ...messages,
+              ...outboxMessages.map(o => {
+                const date = new Date(o.createdAt);
+                const timeStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}_${String(date.getHours()).padStart(2, '0')}-${String(date.getMinutes()).padStart(2, '0')}-${String(date.getSeconds()).padStart(2, '0')}`;
+                return {
+                  id: -o.id,
+                  chatid: o.chatid,
+                  userid: currentUserHash || "",
+                  time: timeStr,
+                  important: o.important || false,
+                  usernick: "Du",
+                  userhash: currentUserHash || "",
+                  text: o.text,
+                  photoid: o.photo ? "local_outbox" : undefined,
+                  position: o.position,
+                  isOutbox: true
+                } as ChatMessage & { isOutbox?: boolean };
+              })
+            ];
+
+            return displayMessages
               .filter((msg) => !deletedMsgIds.includes(msg.id))
               .map((msg) => {
                 const isOwn = isOwnMessage(msg);
@@ -917,6 +949,9 @@ export default function ChatRoomPage({ params }: PageProps) {
                               <span className="text-[9px] font-bold tracking-wide uppercase mr-1">
                                 Dringend
                               </span>
+                            )}
+                            {msg.isOutbox && (
+                              <span className="text-orange-300 mr-1" title="Nachricht wird gesendet, sobald du wieder online bist">🕒</span>
                             )}
                             <span>{formatTimestamp(msg.time)}</span>
                           </div>
