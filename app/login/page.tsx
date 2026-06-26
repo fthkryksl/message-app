@@ -7,16 +7,17 @@ import { ChevronRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { login } from "@/lib/api";
 import { saveToken, saveUserHash } from "@/lib/auth";
-import BlurText from "@/components/BlurText";
-import CircularText from "@/components/CircularText";
-import Grainient from "@/components/Grainient";
-import ShinyText from "@/components/ShinyText";
-import DecryptedText from "@/components/DecryptedText";
+import BlurText from "@/components/ReactBits/BlurText";
+import CircularText from "@/components/ReactBits/CircularText";
+import Grainient from "@/components/ReactBits/Grainient";
+import ShinyText from "@/components/ReactBits/ShinyText";
+import DecryptedText from "@/components/ReactBits/DecryptedText";
 
 const instrumentSerif = Instrument_Serif({ weight: "400", subsets: ["latin"] });
 
 export default function SignIn() {
   const router = useRouter();
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -25,18 +26,13 @@ export default function SignIn() {
 
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.value;
-    if (val.length > 0 && !val.startsWith("@")) {
-      val = "@" + val;
-    }
-    if (username === "@" && val.length <= 1) {
-      val = "";
-    }
+    if (val.length > 0 && !val.startsWith("@")) val = "@" + val;
+    if (username === "@" && val.length <= 1) val = "";
     setUsername(val);
   };
 
   const allValid = password.length > 0 && username.length > 1;
 
-  // Submit Logic
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!allValid || loading) return;
@@ -45,7 +41,6 @@ export default function SignIn() {
     setLoading(true);
 
     try {
-      // Strip leading "@" for API
       const rawUserid = username.startsWith("@") ? username.slice(1) : username;
       const { token, hash } = await login(rawUserid, password);
       saveToken(token);
@@ -55,7 +50,7 @@ export default function SignIn() {
       setError(
         err instanceof Error
           ? err.message
-          : "Login failed. Please check your credentials.",
+          : "Anmeldung fehlgeschlagen. Bitte überprüfe deine Zugangsdaten.",
       );
     } finally {
       setLoading(false);
@@ -67,7 +62,7 @@ export default function SignIn() {
   };
 
   return (
-    <div className="min-h-screen bg-white p-2 pb-2 sm:p-4">
+    <div className="min-h-screen bg-gradient-to-tr from-zinc-50 via-white to-zinc-50 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950 p-2 pb-2 sm:p-4">
       <div className="relative flex flex-col flex-1 items-center justify-center h-[calc(100vh-1rem)] sm:h-[calc(100vh-2rem)] rounded-[2rem] overflow-hidden border border-zinc-100 shadow-sm">
         <div className="absolute inset-0 z-0">
           <Grainient
@@ -88,7 +83,7 @@ export default function SignIn() {
             grainScale={1.3}
             grainAnimated
             contrast={1.5}
-            gamma={1}
+            gamma={2}
             saturation={1}
             centerX={0}
             centerY={0}
@@ -107,19 +102,17 @@ export default function SignIn() {
 
         <main className="relative z-10 flex flex-col items-center w-full max-w-sm">
           <BlurText
-            text="Login"
+            text="Anmelden"
             delay={50}
             animateBy="letters"
             direction="top"
             onAnimationComplete={handleAnimationComplete}
             className={`${instrumentSerif.className} text-3xl text-orange-600 text-center mb-8 tracking-[-0.02em]`}
           />
-          {/* Form */}
           <form
             onSubmit={handleSubmit}
-            className="flex flex-col w-full space-y-4"
+            className="flex flex-col w-[90%] space-y-4"
           >
-            {/* Username */}
             <input
               type="text"
               value={username}
@@ -128,13 +121,12 @@ export default function SignIn() {
               className={`w-full px-5 py-3 rounded-full text-base focus:outline-none transition-colors border bg-white border-transparent text-zinc-900 placeholder:text-zinc-400 ${username.length > 0 ? "focus:border-zinc-400" : "focus:border-zinc-300"}`}
             />
 
-            {/* Password */}
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="password"
+                placeholder="Passwort"
                 className={`w-full px-5 py-3 rounded-full text-base focus:outline-none transition-colors border bg-white border-transparent text-zinc-900 placeholder:text-zinc-400 ${password.length > 0 ? "focus:border-zinc-400" : "focus:border-zinc-300"}`}
               />
               {password.length > 0 && (
@@ -152,7 +144,6 @@ export default function SignIn() {
               )}
             </div>
 
-            {/* API Error */}
             {error && (
               <p className="text-red-500 text-sm text-center px-2">
                 <DecryptedText
@@ -177,14 +168,14 @@ export default function SignIn() {
               <span>
                 {loading ? (
                   <ShinyText
-                    text="Loading"
+                    text="Laden..."
                     disabled={false}
                     speed={2}
                     className="text-zinc-500"
                     shineColor="#ffffff"
                   />
                 ) : (
-                  "Login"
+                  "Anmelden"
                 )}
               </span>
               <ChevronRight
@@ -196,7 +187,7 @@ export default function SignIn() {
               href="/signup"
               className="w-full mt-2 flex items-center justify-center text-sm text-zinc-500 hover:text-zinc-900 transition-colors hover:underline"
             >
-              I don't have an account
+              Ich habe noch kein Konto
             </Link>
           </form>
         </main>
